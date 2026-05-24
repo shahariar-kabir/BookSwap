@@ -1,7 +1,6 @@
 package com.example.bookswap
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -9,18 +8,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.FavoriteBorder
-import androidx.compose.material.icons.outlined.History
-import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -28,57 +24,72 @@ import coil.compose.AsyncImage
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    userName: String = "David",
-    userPhotoUrl: String? = null,
+    userName: String,
+    userPhotoUrl: String?,
     onBookClick: (Book) -> Unit,
+    onExploreClick: () -> Unit,
+    onAddClick: () -> Unit,
+    onChatClick: () -> Unit,
+    onChatRequestClick: (Long) -> Unit,
     onProfileClick: () -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    bookViewModel: BookViewModel,
+    chatViewModel: ChatViewModel
 ) {
-    var searchQuery by remember { mutableStateOf("") }
-    val backgroundColor = Color(0xFFF5F9FF) // Light blueish hue
+    val windowSize = rememberWindowSize()
+    
+    val books = bookViewModel.books
+    val favoriteBookIds = bookViewModel.favorites
+    val chatRequests = chatViewModel.chatRequests
+    
+    val activeSwaps = chatRequests.filter { it.status == "pending" || it.status == "accepted" }
+    
+    val recommendedBooks = remember(books, favoriteBookIds) {
+        val favoriteCategories = books.filter { it.id in favoriteBookIds }.map { it.category }.distinct()
+        if (favoriteCategories.isEmpty()) {
+            books.shuffled().take(5)
+        } else {
+            books.filter { it.category in favoriteCategories && it.id !in favoriteBookIds }.take(5)
+                .ifEmpty { books.shuffled().take(5) }
+        }
+    }
 
     Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        containerColor = backgroundColor,
         bottomBar = {
-            Surface(
-                shadowElevation = 16.dp,
-                tonalElevation = 8.dp,
-                color = backgroundColor
+            NavigationBar(
+                containerColor = Color.White,
+                tonalElevation = 8.dp
             ) {
-                NavigationBar(
-                    containerColor = backgroundColor,
-                    modifier = Modifier.navigationBarsPadding()
-                ) {
-                    NavigationBarItem(
-                        selected = true,
-                        onClick = { },
-                        icon = { Icon(Icons.Default.Home, contentDescription = null) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = Color(0xFFE57373),
-                            indicatorColor = Color.Transparent,
-                            unselectedIconColor = Color.Gray
-                        )
-                    )
-                    NavigationBarItem(
-                        selected = false,
-                        onClick = { },
-                        icon = { Icon(Icons.Outlined.History, contentDescription = null) },
-                        colors = NavigationBarItemDefaults.colors(unselectedIconColor = Color.Gray)
-                    )
-                    NavigationBarItem(
-                        selected = false,
-                        onClick = { },
-                        icon = { Icon(Icons.Outlined.FavoriteBorder, contentDescription = null) },
-                        colors = NavigationBarItemDefaults.colors(unselectedIconColor = Color.Gray)
-                    )
-                    NavigationBarItem(
-                        selected = false,
-                        onClick = onProfileClick,
-                        icon = { Icon(Icons.Outlined.Person, contentDescription = null) },
-                        colors = NavigationBarItemDefaults.colors(unselectedIconColor = Color.Gray)
-                    )
-                }
+                NavigationBarItem(
+                    selected = true,
+                    onClick = { },
+                    icon = { Icon(Icons.Default.Home, contentDescription = null) },
+                    label = { Text("Home") }
+                )
+                NavigationBarItem(
+                    selected = false,
+                    onClick = onExploreClick,
+                    icon = { Icon(Icons.Default.Explore, contentDescription = null) },
+                    label = { Text("Explore") }
+                )
+                NavigationBarItem(
+                    selected = false,
+                    onClick = onAddClick,
+                    icon = { Icon(Icons.Default.AddCircle, contentDescription = null, modifier = Modifier.size(32.dp)) },
+                    label = { Text("Add") }
+                )
+                NavigationBarItem(
+                    selected = false,
+                    onClick = onChatClick,
+                    icon = { Icon(Icons.Default.Message, contentDescription = null) },
+                    label = { Text("Chats") }
+                )
+                NavigationBarItem(
+                    selected = false,
+                    onClick = onProfileClick,
+                    icon = { Icon(Icons.Default.Person, contentDescription = null) },
+                    label = { Text("Profile") }
+                )
             }
         }
     ) { paddingValues ->
@@ -86,260 +97,167 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .background(backgroundColor)
+                .background(Color(0xFFF8F9FA))
+                .verticalScroll(rememberScrollState())
         ) {
-            Column(
+            // Header with constraints
+            Row(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 24.dp)
+                    .fillMaxWidth()
+                    .padding(if (windowSize.widthSizeClass == WindowSizeClass.EXPANDED) 48.dp else 24.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Spacer(modifier = Modifier.statusBarsPadding())
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Header
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = "Hi, $userName 👋",
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.Black
-                        )
-                        Text(
-                            text = "Got Any Books To share?",
-                            fontSize = 16.sp,
-                            color = Color.Gray
-                        )
-                    }
-                    // Profile Image
-                    Surface(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .shadow(4.dp, CircleShape),
-                        shape = CircleShape,
-                        color = backgroundColor,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE0E0E0))
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clickable { onProfileClick() }
-                        ) {
-                            if (userPhotoUrl != null) {
-                                AsyncImage(
-                                    model = userPhotoUrl,
-                                    contentDescription = "Profile Picture",
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
-                                )
-                            } else {
-                                Icon(
-                                    Icons.Default.Person,
-                                    contentDescription = null,
-                                    modifier = Modifier
-                                        .align(Alignment.Center)
-                                        .size(30.dp),
-                                    tint = Color.Gray
-                                )
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-                // Search Bar with Shadow
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .shadow(8.dp, RoundedCornerShape(16.dp)),
-                    shape = RoundedCornerShape(16.dp),
-                    color = backgroundColor
-                ) {
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Search books", color = Color.Gray) },
-                        shape = RoundedCornerShape(16.dp),
-                        trailingIcon = {
-                            Icon(
-                                Icons.Default.Tune,
-                                contentDescription = null,
-                                tint = Color.Gray
-                            )
-                        },
-                        colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedBorderColor = Color(0xFFE0E0E0),
-                            focusedBorderColor = Color(0xFFE57373),
-                            unfocusedContainerColor = backgroundColor,
-                            focusedContainerColor = backgroundColor
-                        )
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-                // Popular Books Section
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = "Welcome back,", color = Color.Gray, fontSize = 14.sp)
                     Text(
-                        text = "Popular Books",
-                        fontSize = 20.sp,
+                        text = "$userName!", 
+                        color = Color.Black, 
+                        fontSize = 24.sp, 
                         fontWeight = FontWeight.Bold,
-                        color = Color.Black
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
-                    TextButton(onClick = { /* View all */ }) {
-                        Text("View all", color = Color.Gray)
-                    }
                 }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Categories
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                Spacer(modifier = Modifier.width(16.dp))
+                Surface(
+                    modifier = Modifier.size(48.dp),
+                    shape = CircleShape,
+                    color = Color(0xFFE3F2FD),
+                    onClick = onProfileClick
                 ) {
-                    CategoryTab("Most Viewed", isSelected = true, backgroundColor)
-                    CategoryTab("Latest", isSelected = false, backgroundColor)
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Book List
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(20.dp),
-                    contentPadding = PaddingValues(bottom = 16.dp, top = 8.dp)
-                ) {
-                    items(sampleBooks) { book ->
-                        BookCard(book = book, onClick = { onBookClick(book) }, backgroundColor)
+                    if (userPhotoUrl != null) {
+                        AsyncImage(
+                            model = userPhotoUrl,
+                            contentDescription = "Profile Picture",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.padding(8.dp), tint = Color(0xFF1976D2))
                     }
                 }
             }
+
+            // 1. Active Swaps Section
+            if (activeSwaps.isNotEmpty()) {
+                SectionHeader(title = "Active Swaps", onSeeAll = onChatClick)
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 24.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(activeSwaps) { request ->
+                        ActiveSwapItem(request = request, onClick = { request.id?.let { onChatRequestClick(it) } })
+                    }
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+
+            // 2. Recommended for You
+            SectionHeader(title = "Recommended for You", onSeeAll = onExploreClick)
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 24.dp),
+                horizontalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                items(recommendedBooks) { book ->
+                    BookCard(
+                        book = book,
+                        isFavorite = favoriteBookIds.contains(book.id),
+                        onFavoriteToggle = { book.id?.let { bookViewModel.toggleFavorite(it) } },
+                        onClick = { onBookClick(book) },
+                        backgroundColor = Color.White,
+                        windowSize = windowSize,
+                        width = 160.dp,
+                        height = 240.dp
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // 3. New Arrivals
+            SectionHeader(title = "New Arrivals", onSeeAll = onExploreClick)
+            Column(
+                modifier = Modifier.padding(horizontal = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                books.take(5).forEach { book ->
+                    RecentBookRow(book = book, onClick = { onBookClick(book) })
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
 
 @Composable
-fun CategoryTab(text: String, isSelected: Boolean, backgroundColor: Color) {
+fun SectionHeader(title: String, onSeeAll: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = title, 
+            fontSize = 20.sp, 
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.weight(1f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        TextButton(onClick = onSeeAll, contentPadding = PaddingValues(start = 8.dp)) {
+            Text("See All", color = Color(0xFF1976D2), softWrap = false)
+        }
+    }
+}
+
+@Composable
+fun ActiveSwapItem(request: ChatRequest, onClick: () -> Unit) {
     Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = if (isSelected) Color(0xFF2D2D2D) else backgroundColor,
         modifier = Modifier
-            .height(45.dp)
-            .shadow(if (isSelected) 8.dp else 2.dp, RoundedCornerShape(12.dp)),
-        border = if (!isSelected) androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE0E0E0)) else null
+            .width(200.dp)
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        color = Color.White,
+        border = BorderStroke(1.dp, Color(0xFFEEEEEE))
     ) {
-        Box(
-            modifier = Modifier.padding(horizontal = 20.dp),
-            contentAlignment = Alignment.Center
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = text,
-                color = if (isSelected) Color.White else Color.Gray,
-                fontWeight = FontWeight.Medium
-            )
-        }
-    }
-}
-
-@Composable
-fun BookCard(book: Book, onClick: () -> Unit, backgroundColor: Color) {
-    Card(
-        modifier = Modifier
-            .width(220.dp)
-            .height(320.dp)
-            .clickable { onClick() }
-            .shadow(12.dp, RoundedCornerShape(24.dp)),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = backgroundColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-    ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            // Book Cover
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .background(if (book.id == 1) Color(0xFFE57373) else Color(0xFFFFB74D))
-            )
-
-            // Favorite Icon
-            Surface(
-                modifier = Modifier
-                    .padding(16.dp)
-                    .size(36.dp)
-                    .align(Alignment.TopEnd),
-                shape = CircleShape,
-                color = Color.Black.copy(alpha = 0.2f)
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(if (request.status == "accepted") Color(0xFFE8F5E9) else Color(0xFFFFF3E0)),
+                contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    Icons.Default.FavoriteBorder,
+                    imageVector = if (request.status == "accepted") Icons.Default.SwapHoriz else Icons.Default.Pending,
                     contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.padding(8.dp)
+                    tint = if (request.status == "accepted") Color(0xFF4CAF50) else Color(0xFFFF9800),
+                    modifier = Modifier.size(24.dp)
                 )
             }
-
-            // Bottom Info Card
-            Surface(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(12.dp)
-                    .fillMaxWidth()
-                    .shadow(4.dp, RoundedCornerShape(16.dp)),
-                shape = RoundedCornerShape(16.dp),
-                color = Color.Black.copy(alpha = 0.5f)
-            ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text(
-                        text = book.title,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
-                    )
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.AccountCircle,
-                                contentDescription = null,
-                                tint = Color(0xFF4FC3F7),
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = book.owner,
-                                color = Color.White.copy(alpha = 0.8f),
-                                fontSize = 11.sp
-                            )
-                        }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.Star,
-                                contentDescription = null,
-                                tint = Color(0xFFFFD54F),
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Text(
-                                text = book.rating.toString(),
-                                color = Color.White,
-                                fontSize = 11.sp,
-                                modifier = Modifier.padding(start = 2.dp)
-                            )
-                        }
-                    }
-                }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = request.bookTitle ?: "Book Swap",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = if (request.status == "accepted") "Ongoing Chat" else "Pending Request",
+                    color = Color.Gray,
+                    fontSize = 12.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }
