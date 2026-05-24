@@ -3,14 +3,18 @@ package com.example.bookswap
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,10 +23,15 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.bookswap.ui.theme.CyanMain
@@ -32,15 +41,35 @@ import com.example.bookswap.ui.theme.DarkTeal
 fun LoginScreen(
     viewModel: AuthViewModel,
     onLoginSuccess: () -> Unit,
-    onSignUpClick: () -> Unit
+    onSignUpClick: () -> Unit,
+    onForgotPasswordClick: () -> Unit
 ) {
-    var identifier by remember { mutableStateOf("") } // Can be email or name
+    var identifier by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var rememberMe by remember { mutableStateOf(false) }
 
     val loading by viewModel.loading
     val error by viewModel.error
+    val scrollState = rememberScrollState()
+    val windowSize = rememberWindowSize()
+
+    // Show Dialog when there is an error
+    if (error != null) {
+        AlertDialog(
+            onDismissRequest = { viewModel.clearError() },
+            icon = { Icon(Icons.Default.Error, contentDescription = null, tint = Color.Red) },
+            title = { Text("Login Issue", fontWeight = FontWeight.Bold) },
+            text = { Text(error ?: "An unexpected error occurred.") },
+            confirmButton = {
+                TextButton(onClick = { viewModel.clearError() }) {
+                    Text("Try Again", color = CyanMain, fontWeight = FontWeight.Bold)
+                }
+            },
+            shape = RoundedCornerShape(24.dp),
+            containerColor = Color.White
+        )
+    }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.White)) {
         HeaderBackground()
@@ -48,12 +77,14 @@ fun LoginScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 32.dp),
+                .systemBarsPadding()
+                .imePadding()
+                .padding(horizontal = if (windowSize.widthSizeClass == WindowSizeClass.EXPANDED) 120.dp else 32.dp)
+                .verticalScroll(scrollState),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(if (windowSize.heightSizeClass == WindowSizeClass.COMPACT) 20.dp else 40.dp))
             
-            // Top Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -65,8 +96,8 @@ fun LoginScreen(
                 }
                 
                 Surface(
-                    modifier = Modifier.size(60.dp),
-                    shape = RoundedCornerShape(30.dp),
+                    modifier = Modifier.size(if (windowSize.widthSizeClass == WindowSizeClass.COMPACT) 60.dp else 80.dp),
+                    shape = RoundedCornerShape(if (windowSize.widthSizeClass == WindowSizeClass.COMPACT) 30.dp else 40.dp),
                     color = Color.White,
                     shadowElevation = 4.dp
                 ) {
@@ -78,20 +109,16 @@ fun LoginScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(100.dp))
+            Spacer(modifier = Modifier.height(if (windowSize.heightSizeClass == WindowSizeClass.COMPACT) 40.dp else 100.dp))
 
             Text(
                 text = "Login",
-                fontSize = 40.sp,
+                fontSize = if (windowSize.widthSizeClass == WindowSizeClass.COMPACT) 40.sp else 56.sp,
                 fontWeight = FontWeight.Black,
                 modifier = Modifier.align(Alignment.Start)
             )
 
-            Spacer(modifier = Modifier.height(40.dp))
-
-            if (error != null) {
-                Text(text = error!!, color = Color.Red, modifier = Modifier.padding(bottom = 8.dp))
-            }
+            Spacer(modifier = Modifier.height(if (windowSize.heightSizeClass == WindowSizeClass.COMPACT) 20.dp else 40.dp))
 
             TextField(
                 value = identifier,
@@ -130,19 +157,19 @@ fun LoginScreen(
                     Checkbox(checked = rememberMe, onCheckedChange = { rememberMe = it })
                     Text("Remember me", fontSize = 12.sp)
                 }
-                TextButton(onClick = { /* TODO */ }) {
+                TextButton(onClick = onForgotPasswordClick) {
                     Text("Forgot password?", fontSize = 12.sp, color = Color.Black)
                 }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(if (windowSize.heightSizeClass == WindowSizeClass.COMPACT) 16.dp else 32.dp))
 
             if (loading) {
                 CircularProgressIndicator(color = CyanMain)
             } else {
                 Button(
                     onClick = { viewModel.login(identifier, password, onLoginSuccess) },
-                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    modifier = Modifier.fillMaxWidth().height(if (windowSize.widthSizeClass == WindowSizeClass.COMPACT) 50.dp else 64.dp),
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = CyanMain)
                 ) {
@@ -152,12 +179,22 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            Row {
-                Text("Don't have an account ? ")
-                TextButton(onClick = onSignUpClick, contentPadding = PaddingValues(0.dp)) {
-                    Text("Sign Up", color = CyanMain, fontWeight = FontWeight.Bold)
-                }
-            }
+            Text(
+                text = buildAnnotatedString {
+                    append("Don't have an account? ")
+                    withStyle(style = SpanStyle(color = CyanMain, fontWeight = FontWeight.Bold)) {
+                        append("Sign Up")
+                    }
+                },
+                color = Color.Gray,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 32.dp)
+                    .navigationBarsPadding()
+                    .clickable { onSignUpClick() },
+                textAlign = TextAlign.Center,
+                fontSize = 14.sp
+            )
         }
     }
 }
@@ -190,4 +227,15 @@ fun HeaderBackground() {
             )
         )
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun LoginScreenPreview() {
+    LoginScreen(
+        viewModel = AuthViewModel(),
+        onLoginSuccess = {},
+        onSignUpClick = {},
+        onForgotPasswordClick = {}
+    )
 }
