@@ -1,45 +1,73 @@
 package com.example.bookswap
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.util.Random
 
 @Composable
 fun SplashScreen() {
-    val backgroundColor = Color(0xFFBB86FC) // Light blueish hue matching Home/Profile
+    val windowSize = rememberWindowSize()
+    
+    val gradient = Brush.linearGradient(
+        colors = listOf(
+            Color(0xFFBA68C8), // Light Purple
+            Color(0xFF9C27B0), // Purple
+            Color(0xFF7B1FA2), // Dark Purple
+            Color(0xFF4A148C)  // Deep Purple
+        ),
+        start = Offset(0f, 0f),
+        end = Offset.Infinite
+    )
     
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(backgroundColor),
+            .background(gradient),
         contentAlignment = Alignment.Center
     ) {
+        GlitterEffect()
+        
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(24.dp)
         ) {
-            BookLogo()
+            val logoSize = when (windowSize.widthSizeClass) {
+                WindowSizeClass.COMPACT -> 120.dp
+                WindowSizeClass.MEDIUM -> 180.dp
+                WindowSizeClass.EXPANDED -> 240.dp
+            }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            BookLogo(size = logoSize)
+
+            Spacer(modifier = Modifier.height(if (windowSize.heightSizeClass == WindowSizeClass.COMPACT) 16.dp else 32.dp))
+
+            val titleFontSize = when (windowSize.widthSizeClass) {
+                WindowSizeClass.COMPACT -> 40.sp
+                WindowSizeClass.MEDIUM -> 56.sp
+                WindowSizeClass.EXPANDED -> 72.sp
+            }
 
             Text(
                 text = "BOOKSWAP",
-                color = Color(0xFF2D2D2D), // Darker text for visibility on light background
-                fontSize = 40.sp,
+                color = Color.White,
+                fontSize = titleFontSize,
                 fontWeight = FontWeight.ExtraBold,
                 fontStyle = FontStyle.Italic,
                 fontFamily = FontFamily.Serif,
@@ -48,8 +76,8 @@ fun SplashScreen() {
 
             Text(
                 text = "looking for books?",
-                color = Color.Black,
-                fontSize = 18.sp,
+                color = Color.White.copy(alpha = 0.7f),
+                fontSize = if (windowSize.widthSizeClass == WindowSizeClass.COMPACT) 16.sp else 20.sp,
                 fontWeight = FontWeight.Medium,
                 fontFamily = FontFamily.SansSerif
             )
@@ -58,64 +86,30 @@ fun SplashScreen() {
 }
 
 @Composable
-fun BookLogo() {
-    Canvas(modifier = Modifier.size(120.dp)) {
-        val w = size.width
-        val h = size.height
-        val bookH = h / 4.5f
-        val spacing = 12.dp.toPx()
-
-        val bookColors = listOf(
-            Color(0xFFE57373), // Coral/Red to match Navigation accent
-            Color(0xFF4FC3F7), // Light Blue
-            Color(0xFF81D4FA)  // Lighter Blue
-        )
-
-        for (i in 0..2) {
-            val y = i * (bookH + spacing)
-            
-            val path = Path().apply {
-                moveTo(w * 0.15f, y + bookH * 0.2f)
-                // Left top curve
-                quadraticBezierTo(w * 0.15f, y, w * 0.25f, y)
-                // Top edge
-                lineTo(w * 0.85f, y)
-                // Right top curve
-                quadraticBezierTo(w * 0.95f, y, w * 0.95f, y + bookH * 0.2f)
-                // Right edge
-                lineTo(w * 0.95f, y + bookH * 0.8f)
-                // Right bottom curve
-                quadraticBezierTo(w * 0.95f, y + bookH, w * 0.85f, y + bookH)
-                // Bottom edge
-                lineTo(w * 0.15f, y + bookH)
-                // Left edge back to start
-                close()
-            }
-
-            // Draw book body with gradient
-            drawPath(
-                path = path,
-                brush = Brush.horizontalGradient(
-                    colors = listOf(bookColors[i].copy(alpha = 0.8f), bookColors[i])
-                )
+fun GlitterEffect() {
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        val random = Random(42) // Fixed seed for stable preview, remove for dynamic glitter
+        repeat(150) {
+            val x = random.nextFloat() * size.width
+            val y = random.nextFloat() * size.height
+            val radius = random.nextFloat() * 1.5.dp.toPx()
+            val alpha = random.nextFloat() * 0.6f + 0.2f
+            drawCircle(
+                color = Color.White.copy(alpha = alpha),
+                radius = radius,
+                center = Offset(x, y)
             )
-
-            // Draw bookmark for first two books
-            if (i < 2) {
-                drawPath(
-                    path = Path().apply {
-                        moveTo(w * 0.55f, y)
-                        lineTo(w * 0.65f, y)
-                        lineTo(w * 0.65f, y + bookH * 0.4f)
-                        lineTo(w * 0.60f, y + bookH * 0.3f)
-                        lineTo(w * 0.55f, y + bookH * 0.4f)
-                        close()
-                    },
-                    color = Color.White.copy(alpha = 0.9f)
-                )
-            }
         }
     }
+}
+
+@Composable
+fun BookLogo(size: androidx.compose.ui.unit.Dp = 120.dp) {
+    Image(
+        painter = painterResource(id = R.drawable.app_logo),
+        contentDescription = "Logo",
+        modifier = Modifier.size(size)
+    )
 }
 
 @Preview

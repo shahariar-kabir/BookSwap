@@ -6,6 +6,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,6 +28,23 @@ fun VerifyScreen(
     var code by remember { mutableStateOf("") }
     val loading by viewModel.loading
     val error by viewModel.error
+
+    // Show Dialog when there is a verification error
+    if (error != null) {
+        AlertDialog(
+            onDismissRequest = { viewModel.clearError() },
+            icon = { Icon(Icons.Default.Error, contentDescription = null, tint = Color.Red) },
+            title = { Text("Verification Issue", fontWeight = FontWeight.Bold) },
+            text = { Text(error ?: "Invalid or expired verification code.") },
+            confirmButton = {
+                TextButton(onClick = { viewModel.clearError() }) {
+                    Text("Try Again", color = CyanMain, fontWeight = FontWeight.Bold)
+                }
+            },
+            shape = RoundedCornerShape(24.dp),
+            containerColor = Color.White
+        )
+    }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.White)) {
         HeaderBackground()
@@ -54,10 +72,6 @@ fun VerifyScreen(
             )
 
             Spacer(modifier = Modifier.height(40.dp))
-
-            if (error != null) {
-                Text(text = error!!, color = Color.Red, modifier = Modifier.padding(bottom = 8.dp))
-            }
 
             TextField(
                 value = code,

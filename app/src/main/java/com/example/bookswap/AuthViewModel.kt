@@ -1,5 +1,6 @@
 package com.example.bookswap
 
+import android.graphics.Bitmap
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
@@ -9,16 +10,21 @@ import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.gotrue.providers.builtin.Email
 import io.github.jan.supabase.gotrue.user.UserInfo
 import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.storage.storage
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
+import java.io.ByteArrayOutputStream
+import java.util.UUID
 
 class AuthViewModel : ViewModel() {
     private val auth = supabase.auth
     private val postgrest = supabase.postgrest
+    private val storage = supabase.storage
 
     private val _loading = mutableStateOf(false)
     val loading: State<Boolean> = _loading
@@ -28,6 +34,151 @@ class AuthViewModel : ViewModel() {
 
     private val _user = mutableStateOf<UserInfo?>(auth.currentUserOrNull())
     val user: State<UserInfo?> = _user
+
+    private val _profile = mutableStateOf<Profile?>(null)
+    val profile: State<Profile?> = _profile
+
+    private val _viewedProfile = mutableStateOf<Profile?>(null)
+    val viewedProfile: State<Profile?> = _viewedProfile
+
+    private var pendingAvatar: Bitmap? = null
+
+    init {
+        if (_user.value != null) {
+            fetchProfile()
+        }
+    }
+
+    fun fetchProfile() {
+        val currentUser = auth.currentUserOrNull() ?: return
+        viewModelScope.launch {
+            try {
+                val result = postgrest["profiles"].select {
+                    filter {
+                        eq("id", currentUser.id)
+                    }
+                }.decodeSingle<Profile>()
+                _profile.value = result
+                
+                if (pendingAvatar != null) {
+                    uploadPendingAvatar()
+                }
+            } catch (e: Exception) {
+                _error.value = "Failed to load profile: ${e.message}"
+            }
+        }
+    }
+
+    private fun uploadPendingAvatar() {
+        val avatar = pendingAvatar ?: return
+        val currentUser = auth.currentUserOrNull() ?: return
+        
+        viewModelScope.launch {
+            try {
+                val compressedBytes = compressImage(avatar)
+                // Path changed to match SQL Policy: folder must be the UID
+                val fileName = "${currentUser.id}/${UUID.randomUUID()}.jpg"
+                val bucket = storage.from("avatars")
+                bucket.upload(fileName, compressedBytes, upsert = true)
+                val avatarUrl = bucket.publicUrl(fileName)
+
+                postgrest["profiles"].update({
+                    Profile::avatarUrl setTo avatarUrl
+                }) {
+                    filter {
+                        eq("id", currentUser.id)
+                    }
+                }
+                pendingAvatar = null
+                fetchProfile()
+            } catch (e: Exception) {
+                println("Failed to upload pending avatar: ${e.message}")
+            }
+        }
+    }
+
+    fun fetchUserProfile(userId: String) {
+        _loading.value = true
+        viewModelScope.launch {
+            try {
+                val result = postgrest["profiles"].select {
+                    filter {
+                        eq("id", userId)
+                    }
+                }.decodeSingle<Profile>()
+                _viewedProfile.value = result
+            } catch (e: Exception) {
+                _error.value = "Failed to load user profile: ${e.message}"
+            } finally {
+                _loading.value = false
+            }
+        }
+    }
+
+    fun clearViewedProfile() {
+        _viewedProfile.value = null
+    }
+
+    private suspend fun compressImage(bitmap: Bitmap): ByteArray = withContext(Dispatchers.Default) {
+        var quality = 80
+        val outputStream = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream)
+        var compressedBytes = outputStream.toByteArray()
+        
+        // Strictly enforcing the 300 KB limit
+        while (compressedBytes.size > 300 * 1024 && quality > 10) {
+            quality -= 10
+            val loopStream = ByteArrayOutputStream()
+            bitmap.compress(Bitmap.CompressFormat.JPEG, quality, loopStream)
+            compressedBytes = loopStream.toByteArray()
+        }
+        compressedBytes
+    }
+
+    fun updateProfile(
+        fullName: String, 
+        username: String, 
+        phone: String, 
+        address: String, 
+        avatarBitmap: Bitmap? = null,
+        onSuccess: () -> Unit
+    ) {
+        val currentUser = auth.currentUserOrNull() ?: return
+        _loading.value = true
+        _error.value = null
+        viewModelScope.launch {
+            try {
+                var avatarUrl = _profile.value?.avatarUrl
+
+                if (avatarBitmap != null) {
+                    val compressedBytes = compressImage(avatarBitmap)
+                    // Path changed to match SQL Policy: folder must be the UID
+                    val fileName = "${currentUser.id}/${UUID.randomUUID()}.jpg"
+                    val bucket = storage.from("avatars")
+                    bucket.upload(fileName, compressedBytes, upsert = true)
+                    avatarUrl = bucket.publicUrl(fileName)
+                }
+
+                postgrest["profiles"].update({
+                    Profile::fullName setTo fullName
+                    Profile::username setTo username
+                    Profile::phone setTo phone
+                    Profile::address setTo address
+                    Profile::avatarUrl setTo avatarUrl
+                }) {
+                    filter {
+                        eq("id", currentUser.id)
+                    }
+                }
+                fetchProfile()
+                onSuccess()
+            } catch (e: Exception) {
+                _error.value = "Failed to update profile: ${e.message}"
+            } finally {
+                _loading.value = false
+            }
+        }
+    }
 
     fun login(identifier: String, password: String, onSuccess: () -> Unit) {
         if (identifier.isBlank() || password.isBlank()) {
@@ -41,17 +192,19 @@ class AuthViewModel : ViewModel() {
                 val emailToUse = if (identifier.contains("@")) {
                     identifier
                 } else {
-                    // Try to find email by full_name in profiles table
                     val response = postgrest["profiles"].select {
                         filter {
-                            eq("full_name", identifier)
+                            or {
+                                eq("full_name", identifier)
+                                eq("username", identifier)
+                            }
                         }
                     }
                     val data = response.decodeList<Profile>()
                     if (data.isNotEmpty()) {
                         data[0].email
                     } else {
-                        throw Exception("User not found with this name")
+                        throw Exception("User not found")
                     }
                 }
 
@@ -60,9 +213,17 @@ class AuthViewModel : ViewModel() {
                     this.password = password
                 }
                 _user.value = auth.currentUserOrNull()
+                fetchProfile()
                 onSuccess()
             } catch (e: Exception) {
-                _error.value = e.message ?: "Login failed"
+                val message = e.message ?: ""
+                _error.value = when {
+                    message.contains("Invalid login credentials", ignoreCase = true) -> 
+                        "Incorrect email or password. Please try again."
+                    message.contains("User not found", ignoreCase = true) -> 
+                        "No account found with this name or email."
+                    else -> "Login failed. Please check your connection."
+                }
             } finally {
                 _loading.value = false
             }
@@ -73,16 +234,21 @@ class AuthViewModel : ViewModel() {
         email: String,
         password: String,
         name: String,
+        username: String,
         phone: String,
         address: String,
+        avatarBitmap: Bitmap? = null,
         onSuccess: () -> Unit
     ) {
-        if (email.isBlank() || password.isBlank() || name.isBlank() || phone.isBlank() || address.isBlank()) {
+        if (email.isBlank() || password.isBlank() || name.isBlank() || username.isBlank() || phone.isBlank() || address.isBlank()) {
             _error.value = "Please fill in all fields"
             return
         }
         _loading.value = true
         _error.value = null
+        
+        pendingAvatar = avatarBitmap
+        
         viewModelScope.launch {
             try {
                 auth.signUpWith(Email) {
@@ -90,13 +256,19 @@ class AuthViewModel : ViewModel() {
                     this.password = password
                     data = buildJsonObject {
                         put("full_name", name)
+                        put("username", username)
                         put("phone", phone)
                         put("address", address)
                     }
                 }
                 onSuccess()
             } catch (e: Exception) {
-                _error.value = e.message ?: "Sign up failed"
+                val message = e.message ?: ""
+                _error.value = when {
+                    message.contains("User already registered", ignoreCase = true) -> 
+                        "An account with this email already exists."
+                    else -> message.ifBlank { "Sign up failed" }
+                }
             } finally {
                 _loading.value = false
             }
@@ -117,11 +289,31 @@ class AuthViewModel : ViewModel() {
                     email = email,
                     token = code
                 )
-                auth.signOut() // Sign out after verification so they have to login
+                auth.signOut() 
                 _user.value = null
+                _profile.value = null
                 onSuccess()
             } catch (e: Exception) {
-                _error.value = e.message ?: "Verification failed"
+                _error.value = "Invalid or expired verification code."
+            } finally {
+                _loading.value = false
+            }
+        }
+    }
+
+    fun sendResetPassword(email: String, onSuccess: () -> Unit) {
+        if (email.isBlank()) {
+            _error.value = "Please enter your email"
+            return
+        }
+        _loading.value = true
+        _error.value = null
+        viewModelScope.launch {
+            try {
+                auth.resetPasswordForEmail(email)
+                onSuccess()
+            } catch (e: Exception) {
+                _error.value = "Failed to send reset link. Check your email address."
             } finally {
                 _loading.value = false
             }
@@ -132,6 +324,7 @@ class AuthViewModel : ViewModel() {
         viewModelScope.launch {
             auth.signOut()
             _user.value = null
+            _profile.value = null
         }
     }
 
@@ -140,7 +333,15 @@ class AuthViewModel : ViewModel() {
     }
 }
 
-@kotlinx.serialization.Serializable
+@Serializable
 data class Profile(
-    val email: String
+    val id: String? = null,
+    @SerialName("full_name")
+    val fullName: String,
+    val username: String? = null,
+    val email: String,
+    val phone: String? = null,
+    val address: String? = null,
+    @SerialName("avatar_url")
+    val avatarUrl: String? = null
 )
