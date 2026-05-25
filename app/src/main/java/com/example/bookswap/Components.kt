@@ -30,6 +30,7 @@ import kotlin.math.roundToInt
 @Composable
 fun RatingChip(
     rating: Double,
+    reviewCount: Int = 0,
     onClick: (() -> Unit)? = null
 ) {
     Surface(
@@ -55,6 +56,14 @@ fun RatingChip(
                 color = Color.DarkGray,
                 maxLines = 1
             )
+            if (reviewCount > 0) {
+                Text(
+                    text = " ($reviewCount)",
+                    fontSize = 11.sp,
+                    color = Color.Gray,
+                    modifier = Modifier.padding(start = 2.dp)
+                )
+            }
         }
     }
 }
@@ -109,51 +118,104 @@ fun DetailRow(label: String, value: String) {
 }
 
 @Composable
-fun RatingSliderDialog(
-    currentRating: Double,
+fun ReviewDialog(
     onDismiss: () -> Unit,
-    onSubmit: (Double) -> Unit
+    onSubmit: (Int, String) -> Unit
 ) {
-    var sliderValue by remember { mutableFloatStateOf(currentRating.toFloat()) }
+    var rating by remember { mutableIntStateOf(5) }
+    var comment by remember { mutableStateOf("") }
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Rate this Book", fontWeight = FontWeight.Bold) },
+        title = { Text("Write a Review", fontWeight = FontWeight.Bold) },
         text = {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = String.format(Locale.getDefault(), "%.1f", sliderValue),
-                    fontSize = 40.sp,
-                    fontWeight = FontWeight.Black,
-                    color = CyanMain
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Slider(
-                    value = sliderValue,
-                    onValueChange = { sliderValue = (it * 10).roundToInt() / 10f },
-                    valueRange = 0f..5f,
-                    steps = 49,
-                    colors = SliderDefaults.colors(
-                        thumbColor = CyanMain,
-                        activeTrackColor = CyanMain
-                    )
-                )
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("0.0", color = Color.Gray, fontSize = 12.sp)
-                    Text("5.0", color = Color.Gray, fontSize = 12.sp)
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Row(
+                    modifier = Modifier.padding(vertical = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    for (i in 1..5) {
+                        Icon(
+                            imageVector = if (i <= rating) Icons.Default.Star else Icons.Default.StarBorder,
+                            contentDescription = null,
+                            tint = if (i <= rating) Color(0xFFFFD54F) else Color.Gray,
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clickable { rating = i }
+                        )
+                    }
                 }
+                
+                OutlinedTextField(
+                    value = comment,
+                    onValueChange = { comment = it },
+                    label = { Text("Tell us what you think (optional)") },
+                    modifier = Modifier.fillMaxWidth().height(120.dp),
+                    shape = RoundedCornerShape(12.dp)
+                )
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSubmit(sliderValue.toDouble()) }) {
-                Text("Submit", color = CyanMain, fontWeight = FontWeight.Bold)
+            Button(
+                onClick = { onSubmit(rating, comment) },
+                colors = ButtonDefaults.buttonColors(containerColor = CyanMain),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("Submit Review", color = Color.Black, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text("Cancel")
             }
-        }
+        },
+        shape = RoundedCornerShape(24.dp),
+        containerColor = Color.White
     )
+}
+
+@Composable
+fun ReviewItem(review: BookReview) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = Color(0xFFF8F9FA),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = review.reviewerName ?: "Anonymous",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp
+                )
+                Row {
+                    for (i in 1..5) {
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = null,
+                            tint = if (i <= review.rating) Color(0xFFFFD54F) else Color.LightGray,
+                            modifier = Modifier.size(12.dp)
+                        )
+                    }
+                }
+            }
+            if (!review.comment.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = review.comment,
+                    fontSize = 13.sp,
+                    color = Color.DarkGray
+                )
+            }
+        }
+    }
 }
 
 @Composable

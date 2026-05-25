@@ -20,8 +20,10 @@ data class ChatRequest(
     // UI Helper fields (not saved in chat_requests table directly)
     var senderName: String? = null,
     var senderUsername: String? = null,
+    var senderAvatar: String? = null,
     var receiverName: String? = null,
     var receiverUsername: String? = null,
+    var receiverAvatar: String? = null,
     var bookTitle: String? = null
 )
 
@@ -35,4 +37,20 @@ data class Message(
     val content: String,
     @SerialName("created_at")
     val createdAt: String? = null
+)
+
+@Serializable
+data class BlockedUser(
+    val id: Long? = null,
+    @SerialName("blocker_id")
+    val blockerId: String,
+    @SerialName("blocked_id")
+    val blockedId: String,
+    @SerialName("created_at")
+    val createdAt: String? = null,
+    
+    // UI Helper fields
+    var blockedName: String? = null,
+    var blockedUsername: String? = null,
+    var blockedAvatar: String? = null
 )
