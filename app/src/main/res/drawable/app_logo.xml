@@ -1,12 +1,26 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="512"
-    android:viewportHeight="512">
+    android:width="120dp"
+    android:height="120dp"
+    android:viewportWidth="120"
+    android:viewportHeight="120">
+    <!-- Top Book -->
     <path
-        android:fillColor="#000000"
-        android:pathData="M256,16C123.45,16 16,123.45 16,256s107.45,240 240,240 240,-107.45 240,-240S388.55,16 256,16zM256,464c-114.88,0 -208,-93.12 -208,-208S141.12,48 256,48s208,93.12 208,208 -93.12,208 -208,208z" />
+        android:fillColor="#EF827D"
+        android:pathData="M20,20 h80 a5,5 0 0 1 5,5 v15 a5,5 0 0 1 -5,5 h-80 a5,5 0 0 1 -5,-5 v-15 a5,5 0 0 1 5,-5 z" />
     <path
-        android:fillColor="#000000"
-        android:pathData="M384,192l-128,-72l-128,72v128l128,72l128,-72V192zM256,145.42l96,54L256,253.42l-96,-54L256,145.42zM153.14,213.14l86.86,48.86v97.14l-86.86,-48.86V213.14zM272,359.14V262l86.86,-48.86v97.14L272,359.14z" />
+        android:fillColor="#FFFFFF"
+        android:pathData="M55,20 h10 v12 l-5,-3 l-5,3 z" />
+
+    <!-- Middle Book -->
+    <path
+        android:fillColor="#70CEF5"
+        android:pathData="M20,48 h80 a5,5 0 0 1 5,5 v15 a5,5 0 0 1 -5,5 h-80 a5,5 0 0 1 -5,-5 v-15 a5,5 0 0 1 5,-5 z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M55,48 h10 v12 l-5,-3 l-5,3 z" />
+
+    <!-- Bottom Book -->
+    <path
+        android:fillColor="#95DFFB"
+        android:pathData="M20,76 h80 a5,5 0 0 1 5,5 v15 a5,5 0 0 1 -5,5 h-80 a5,5 0 0 1 -5,-5 v-15 a5,5 0 0 1 5,-5 z" />
 </vector>

@@ -51,9 +51,15 @@ fun BookDetailsScreen(
     
     val isOwner = book.ownerId == currentUserId
     var showDeleteDialog by remember { mutableStateOf(false) }
-    var showRatingDialog by remember { mutableStateOf(false) }
+    var showReviewDialog by remember { mutableStateOf(false) }
     var selectedTabIndex by remember { mutableIntStateOf(0) }
-    val tabTitles = if (isOwner) listOf("Overview", "Details", "Edit Info") else listOf("Overview", "Details")
+    val tabTitles = if (isOwner) listOf("Overview", "Details", "Reviews", "Edit Info") else listOf("Overview", "Details", "Reviews")
+
+    val reviews = bookViewModel.bookReviews
+
+    LaunchedEffect(bookId) {
+        bookViewModel.fetchBookReviews(bookId)
+    }
 
     if (error != null) {
         AlertDialog(
@@ -71,13 +77,12 @@ fun BookDetailsScreen(
         )
     }
 
-    if (showRatingDialog) {
-        RatingSliderDialog(
-            currentRating = book.rating,
-            onDismiss = { showRatingDialog = false },
-            onSubmit = { newRating ->
-                book.id?.let { bookViewModel.rateBook(it, newRating) }
-                showRatingDialog = false
+    if (showReviewDialog) {
+        ReviewDialog(
+            onDismiss = { showReviewDialog = false },
+            onSubmit = { rating, comment ->
+                book.id?.let { bookViewModel.submitReview(it, rating, comment) {} }
+                showReviewDialog = false
             }
         )
     }
@@ -306,8 +311,9 @@ fun BookDetailsScreen(
                         bgColor = if (book.isForRent) Color(0xFFE3F2FD) else Color(0xFFF5F5F5)
                     )
                     RatingChip(
-                        rating = book.rating,
-                        onClick = { if (!isOwner) showRatingDialog = true }
+                        rating = book.averageRating ?: 0.0,
+                        reviewCount = book.reviewCount,
+                        onClick = { selectedTabIndex = 2 }
                     )
                 }
 
@@ -362,7 +368,50 @@ fun BookDetailsScreen(
                             DetailRow(label = "Book ID", value = "#${book.id}")
                         }
                     }
-                    2 -> { // Edit Info Tab (Owner only)
+                    2 -> { // Reviews
+                        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = if (reviews.isEmpty()) "No Reviews Yet" else "Customer Reviews",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 18.sp
+                                )
+                                if (!isOwner) {
+                                    val hasReviewed = reviews.any { it.userId == currentUserId }
+                                    if (!hasReviewed) {
+                                        TextButton(onClick = { showReviewDialog = true }) {
+                                            Text("Write a Review", color = CyanMain, fontWeight = FontWeight.Bold)
+                                        }
+                                    } else {
+                                        Text(
+                                            "You've reviewed this",
+                                            fontSize = 12.sp,
+                                            color = Color.Gray,
+                                            modifier = Modifier.padding(end = 8.dp)
+                                        )
+                                    }
+                                }
+                            }
+                            
+                            if (reviews.isEmpty()) {
+                                Box(
+                                    modifier = Modifier.fillMaxWidth().padding(32.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("Be the first to review this book!", color = Color.Gray)
+                                }
+                            } else {
+                                reviews.forEach { review ->
+                                    ReviewItem(review = review)
+                                }
+                            }
+                        }
+                    }
+                    3 -> { // Edit Info Tab (Owner only)
                         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                             Button(onClick = onEditClick, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A1A1A))) {
                                 Icon(Icons.Default.Edit, contentDescription = null)

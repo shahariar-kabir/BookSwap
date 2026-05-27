@@ -45,6 +45,9 @@ class BookViewModel : ViewModel() {
     private val _wishlist = mutableStateListOf<Long>()
     val wishlist: List<Long> = _wishlist
 
+    private val _bookReviews = mutableStateListOf<BookReview>()
+    val bookReviews: List<BookReview> = _bookReviews
+
     init {
         fetchBooks()
         subscribeToBooks()
@@ -96,6 +99,25 @@ class BookViewModel : ViewModel() {
                         order("id", Order.DESCENDING)
                     }
                     .decodeList<Book>()
+
+                // Fetch average ratings and review counts for all books
+                val allReviews = try {
+                    postgrest["book_reviews"].select().decodeList<BookReview>()
+                } catch (e: Exception) {
+                    emptyList<BookReview>()
+                }
+
+                results.forEach { book ->
+                    val bookReviews = allReviews.filter { it.bookId == book.id }
+                    if (bookReviews.isNotEmpty()) {
+                        book.averageRating = bookReviews.map { it.rating }.average()
+                        book.reviewCount = bookReviews.size
+                    } else {
+                        book.averageRating = 0.0
+                        book.reviewCount = 0
+                    }
+                }
+
                 _books.clear()
                 _books.addAll(results)
                 
@@ -256,6 +278,58 @@ class BookViewModel : ViewModel() {
             } catch (e: Exception) {
                 _error.value = "Failed to delete book: ${e.message}"
                 fetchBooks() // Restore if delete actually failed
+            }
+        }
+    }
+
+    fun submitReview(bookId: Long, rating: Int, comment: String, onSuccess: () -> Unit) {
+        val currentUser = auth.currentUserOrNull() ?: return
+        viewModelScope.launch {
+            try {
+                val review = BookReview(
+                    bookId = bookId,
+                    userId = currentUser.id,
+                    rating = rating,
+                    comment = comment
+                )
+                postgrest["book_reviews"].insert(review)
+                fetchBooks() // Refresh average ratings
+                fetchBookReviews(bookId)
+                onSuccess()
+            } catch (e: Exception) {
+                val errorMessage = e.message ?: ""
+                if (errorMessage.contains("duplicate key") || errorMessage.contains("23505")) {
+                    _error.value = "You have already reviewed this book. You can only leave one review per book."
+                } else {
+                    _error.value = "Failed to submit review: ${e.message}"
+                }
+            }
+        }
+    }
+
+    fun fetchBookReviews(bookId: Long) {
+        viewModelScope.launch {
+            try {
+                val reviews = postgrest["book_reviews"].select {
+                    filter { eq("book_id", bookId) }
+                }.decodeList<BookReview>()
+                
+                if (reviews.isNotEmpty()) {
+                    val userIds = reviews.map { it.userId }.distinct()
+                    val profiles = postgrest["profiles"].select {
+                        filter { isIn("id", userIds) }
+                    }.decodeList<Profile>()
+                    
+                    reviews.forEach { review ->
+                        val profile = profiles.find { it.id == review.userId }
+                        review.reviewerName = profile?.fullName ?: profile?.email ?: "Anonymous"
+                    }
+                }
+                
+                _bookReviews.clear()
+                _bookReviews.addAll(reviews.sortedByDescending { it.createdAt })
+            } catch (e: Exception) {
+                _error.value = "Failed to fetch reviews: ${e.message}"
             }
         }
     }

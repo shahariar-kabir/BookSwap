@@ -27,7 +27,27 @@ data class Book(
     val category: String = "Fiction",
     val location: String = "Nearby",
     @SerialName("created_at")
-    val createdAt: String? = null
+    val createdAt: String? = null,
+    
+    // UI Helper fields
+    var averageRating: Double? = null,
+    var reviewCount: Int = 0
+)
+
+@Serializable
+data class BookReview(
+    val id: Long? = null,
+    @SerialName("book_id")
+    val bookId: Long,
+    @SerialName("user_id")
+    val userId: String,
+    val rating: Int, // 1-5
+    val comment: String? = null,
+    @SerialName("created_at")
+    val createdAt: String? = null,
+    
+    // UI Helper
+    var reviewerName: String? = null
 )
 
 @Serializable
