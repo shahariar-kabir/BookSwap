@@ -7,6 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -24,10 +25,9 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.example.bookswap.ui.theme.CyanMain
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,11 +63,10 @@ fun EditBookScreen(
             text = { Text(error ?: "An unexpected error occurred while updating the book.") },
             confirmButton = {
                 TextButton(onClick = { viewModel.clearError() }) {
-                    Text("Try Again", color = CyanMain, fontWeight = FontWeight.Bold)
+                    Text("Try Again", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                 }
             },
-            shape = RoundedCornerShape(24.dp),
-            containerColor = Color.White
+            shape = RoundedCornerShape(24.dp)
         )
     }
 
@@ -80,35 +79,33 @@ fun EditBookScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Edit Book Info", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
-            )
-        }
+    BookSwapScaffold(
+        title = "Edit Book Info",
+        showBack = true,
+        onBack = onBack
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .background(Color.White)
-                .padding(24.dp)
+                .padding(horizontal = 24.dp)
                 .verticalScroll(scrollState),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Spacer(modifier = Modifier.height(24.dp))
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(200.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color(0xFFF5F5F5))
-                    .clickable { launcher.launch("image/*") },
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .clickable { launcher.launch("image/*") }
+                    .border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(24.dp)
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 if (imageBitmap != null) {
@@ -126,46 +123,48 @@ fun EditBookScreen(
                         contentScale = ContentScale.Crop
                     )
                 } else {
-                    Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, modifier = Modifier.size(48.dp), tint = Color.Gray)
+                    Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.primary)
                 }
                 
                 Surface(
-                    modifier = Modifier.align(Alignment.TopEnd).padding(8.dp),
+                    modifier = Modifier.align(Alignment.TopEnd).padding(12.dp),
                     shape = RoundedCornerShape(8.dp),
                     color = Color.Black.copy(alpha = 0.6f)
                 ) {
-                    Text("Change Cover", color = Color.White, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), fontSize = 12.sp)
+                    Text(
+                        "Change Cover", 
+                        color = Color.White, 
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), 
+                        style = MaterialTheme.typography.labelSmall
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
-            OutlinedTextField(
+            BookSwapTextField(
                 value = title,
                 onValueChange = { title = it; viewModel.clearError() },
-                label = { Text("Book Title") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
+                label = "Book Title",
+                leadingIcon = { Icon(Icons.Default.Title, contentDescription = null) }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            OutlinedTextField(
+            BookSwapTextField(
                 value = author,
                 onValueChange = { author = it; viewModel.clearError() },
-                label = { Text("Author") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
+                label = "Author",
+                leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            OutlinedTextField(
+            BookSwapTextField(
                 value = location,
                 onValueChange = { location = it; viewModel.clearError() },
-                label = { Text("Location") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
+                label = "Location",
+                leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null) }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -180,9 +179,15 @@ fun EditBookScreen(
                     onValueChange = {},
                     readOnly = true,
                     label = { Text("Category") },
+                    leadingIcon = { Icon(Icons.Default.Category, contentDescription = null) },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                     modifier = Modifier.menuAnchor().fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f),
+                        focusedLabelColor = MaterialTheme.colorScheme.primary,
+                    )
                 )
                 ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                     categories.forEach { category ->
@@ -200,12 +205,12 @@ fun EditBookScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            OutlinedTextField(
+            BookSwapTextField(
                 value = description,
                 onValueChange = { description = it; viewModel.clearError() },
-                label = { Text("Description") },
-                modifier = Modifier.fillMaxWidth().height(150.dp),
-                shape = RoundedCornerShape(12.dp)
+                label = "Description",
+                leadingIcon = { Icon(Icons.Default.Description, contentDescription = null) },
+                modifier = Modifier.height(150.dp)
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -215,63 +220,71 @@ fun EditBookScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Available for Swaps", fontWeight = FontWeight.Medium)
+                Text(
+                    "Available for Swaps", 
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
                 Switch(
                     checked = isAvailable,
                     onCheckedChange = { isAvailable = it },
-                    colors = SwitchDefaults.colors(checkedThumbColor = CyanMain)
+                    colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.primary)
                 )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
 
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(checked = isForRent, onCheckedChange = { isForRent = it })
-                Text("Allow Renting", fontWeight = FontWeight.Medium)
+                Checkbox(
+                    checked = isForRent, 
+                    onCheckedChange = { isForRent = it },
+                    colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
+                )
+                Text(
+                    "Allow Renting", 
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
             }
 
             if (isForRent) {
                 Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
+                BookSwapTextField(
                     value = rentalPrice,
                     onValueChange = { rentalPrice = it; viewModel.clearError() },
-                    label = { Text("Rental Price per Day ($)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    label = "Rental Price per Day ($)",
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal
+                    )
                 )
             }
 
             Spacer(modifier = Modifier.height(40.dp))
 
-            if (loading) {
-                CircularProgressIndicator(color = CyanMain)
-            } else {
-                Button(
-                    onClick = {
-                        book.id?.let { id ->
-                            viewModel.updateBook(
-                                bookId = id,
-                                title = title,
-                                author = author,
-                                description = description,
-                                category = selectedCategory,
-                                location = location,
-                                isForRent = isForRent,
-                                isAvailable = isAvailable,
-                                rentalPrice = rentalPrice.toDoubleOrNull(),
-                                imageBitmap = imageBitmap,
-                                existingImageUrl = book.imageUrl,
-                                onSuccess = onBookUpdated
-                            )
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = CyanMain)
-                ) {
-                    Text("SAVE CHANGES", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.Black)
-                }
-            }
+            BookSwapButton(
+                text = "SAVE CHANGES",
+                onClick = {
+                    book.id?.let { id ->
+                        viewModel.updateBook(
+                            bookId = id,
+                            title = title,
+                            author = author,
+                            description = description,
+                            category = selectedCategory,
+                            location = location,
+                            isForRent = isForRent,
+                            isAvailable = isAvailable,
+                            rentalPrice = rentalPrice.toDoubleOrNull(),
+                            imageBitmap = imageBitmap,
+                            existingImageUrl = book.imageUrl,
+                            onSuccess = onBookUpdated
+                        )
+                    }
+                },
+                isLoading = loading
+            )
+            
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }

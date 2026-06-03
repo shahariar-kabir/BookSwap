@@ -17,32 +17,38 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary = OceanSkyBlue,
+    secondary = OceanSoftTeal,
+    tertiary = OceanAquamarine,
+    background = OceanPearlWhite,
+    surface = Color.White.copy(alpha = 0.8f),
+    onPrimary = Color.White,
+    onSecondary = Color.Black,
+    onTertiary = Color.Black,
+    onBackground = Color.Black,
+    onSurface = Color.Black,
+    surfaceVariant = Color(0xFFE1F5FE),
+    onSurfaceVariant = Color.DarkGray
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
+    primary = OceanSkyBlue,
+    secondary = OceanSoftTeal,
+    tertiary = OceanAquamarine,
+    background = Color.White,
+    surface = Color.White,
+    onPrimary = Color.Black,
     onSecondary = Color.White,
     onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+    onBackground = Color.Black,
+    onSurface = Color.Black
 )
 
 @Composable
 fun BookSwapTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    // Forced false to maintain the custom purple-orange design system
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {

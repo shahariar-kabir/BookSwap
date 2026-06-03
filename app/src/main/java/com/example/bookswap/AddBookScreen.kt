@@ -24,9 +24,9 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.example.bookswap.ui.theme.CyanMain
+import androidx.compose.foundation.border
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,11 +62,10 @@ fun AddBookScreen(
             text = { Text(error ?: "An unexpected error occurred while adding the book.") },
             confirmButton = {
                 TextButton(onClick = { viewModel.clearError() }) {
-                    Text("Try Again", color = CyanMain, fontWeight = FontWeight.Bold)
+                    Text("Try Again", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                 }
             },
-            shape = RoundedCornerShape(24.dp),
-            containerColor = Color.White
+            shape = RoundedCornerShape(24.dp)
         )
     }
 
@@ -80,38 +79,34 @@ fun AddBookScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Add New Book", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White
-                )
-            )
-        }
+    BookSwapScaffold(
+        title = "Add New Book",
+        showBack = true,
+        onBack = onBack
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .background(Color.White)
-                .padding(24.dp)
+                .padding(horizontal = 24.dp)
                 .verticalScroll(scrollState),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Spacer(modifier = Modifier.height(24.dp))
+
             // Image Upload Area
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(200.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color(0xFFF5F5F5))
-                    .clickable { launcher.launch("image/*") },
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .clickable { launcher.launch("image/*") }
+                    .border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(24.dp)
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 if (imageBitmap != null) {
@@ -122,7 +117,7 @@ fun AddBookScreen(
                         contentScale = ContentScale.Crop
                     )
                     Surface(
-                        modifier = Modifier.align(Alignment.TopEnd).padding(8.dp),
+                        modifier = Modifier.align(Alignment.TopEnd).padding(12.dp),
                         shape = RoundedCornerShape(8.dp),
                         color = Color.Black.copy(alpha = 0.6f)
                     ) {
@@ -130,7 +125,7 @@ fun AddBookScreen(
                             "Change",
                             color = Color.White,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            fontSize = 12.sp
+                            style = MaterialTheme.typography.labelSmall
                         )
                     }
                 } else {
@@ -139,52 +134,51 @@ fun AddBookScreen(
                             Icons.Default.AddPhotoAlternate,
                             contentDescription = null,
                             modifier = Modifier.size(48.dp),
-                            tint = Color.Gray
+                            tint = MaterialTheme.colorScheme.primary
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("Upload Book Cover", color = Color.Gray)
+                        Text(
+                            "Upload Book Cover", 
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }
 
             Text(
                 text = "Note: Images will be automatically compressed for optimal performance.",
-                color = Color.Gray,
-                fontSize = 12.sp,
-                modifier = Modifier.padding(top = 8.dp, bottom = 16.dp)
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                modifier = Modifier.padding(top = 12.dp, bottom = 16.dp),
+                textAlign = TextAlign.Center
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            OutlinedTextField(
+            BookSwapTextField(
                 value = title,
                 onValueChange = { title = it; viewModel.clearError() },
-                label = { Text("Book Title") },
-                leadingIcon = { Icon(Icons.Default.Title, contentDescription = null) },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
+                label = "Book Title",
+                leadingIcon = { Icon(Icons.Default.Title, contentDescription = null) }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            OutlinedTextField(
+            BookSwapTextField(
                 value = author,
                 onValueChange = { author = it; viewModel.clearError() },
-                label = { Text("Author") },
-                leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
+                label = "Author",
+                leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            OutlinedTextField(
+            BookSwapTextField(
                 value = location,
                 onValueChange = { location = it; viewModel.clearError() },
-                label = { Text("Location (e.g., City)") },
-                leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null) },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
+                label = "Location (e.g., City)",
+                leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null) }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -202,8 +196,12 @@ fun AddBookScreen(
                     leadingIcon = { Icon(Icons.Default.Category, contentDescription = null) },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                     modifier = Modifier.menuAnchor().fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f),
+                        focusedLabelColor = MaterialTheme.colorScheme.primary,
+                    )
                 )
                 ExposedDropdownMenu(
                     expanded = expanded,
@@ -224,13 +222,12 @@ fun AddBookScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            OutlinedTextField(
+            BookSwapTextField(
                 value = description,
                 onValueChange = { description = it; viewModel.clearError() },
-                label = { Text("Description") },
+                label = "Description",
                 leadingIcon = { Icon(Icons.Default.Description, contentDescription = null) },
-                modifier = Modifier.fillMaxWidth().height(150.dp),
-                shape = RoundedCornerShape(12.dp)
+                modifier = Modifier.height(150.dp)
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -241,48 +238,49 @@ fun AddBookScreen(
             ) {
                 Checkbox(
                     checked = isForRent,
-                    onCheckedChange = { isForRent = it }
+                    onCheckedChange = { isForRent = it },
+                    colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
                 )
-                Text("Allow Renting", fontWeight = FontWeight.Medium)
+                Text(
+                    "Allow Renting", 
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
             }
 
             if (isForRent) {
                 Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
+                BookSwapTextField(
                     value = rentalPrice,
                     onValueChange = { rentalPrice = it; viewModel.clearError() },
-                    label = { Text("Rental Price per Day ($)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    label = "Rental Price per Day ($)",
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal
+                    )
                 )
             }
 
             Spacer(modifier = Modifier.height(40.dp))
 
-            if (loading) {
-                CircularProgressIndicator(color = CyanMain)
-            } else {
-                Button(
-                    onClick = {
-                        viewModel.addBook(
-                            title = title,
-                            author = author,
-                            description = description,
-                            category = selectedCategory,
-                            location = location,
-                            isForRent = isForRent,
-                            rentalPrice = rentalPrice.toDoubleOrNull(),
-                            imageBitmap = imageBitmap,
-                            onSuccess = onBookAdded
-                        )
-                    },
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = CyanMain)
-                ) {
-                    Text("PUBLISH BOOK", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.Black)
-                }
-            }
+            BookSwapButton(
+                text = "PUBLISH BOOK",
+                onClick = {
+                    viewModel.addBook(
+                        title = title,
+                        author = author,
+                        description = description,
+                        category = selectedCategory,
+                        location = location,
+                        isForRent = isForRent,
+                        rentalPrice = rentalPrice.toDoubleOrNull(),
+                        imageBitmap = imageBitmap,
+                        onSuccess = onBookAdded
+                    )
+                },
+                isLoading = loading
+            )
+            
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }

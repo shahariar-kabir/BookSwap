@@ -1,6 +1,8 @@
 package com.example.bookswap
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -14,15 +16,21 @@ import io.github.jan.supabase.realtime.channel
 import io.github.jan.supabase.realtime.decodeRecord
 import io.github.jan.supabase.realtime.postgresChangeFlow
 import io.github.jan.supabase.realtime.realtime
+import io.github.jan.supabase.storage.storage
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
+import java.util.UUID
 
 class ChatViewModel : ViewModel() {
     private val postgrest = supabase.postgrest
     private val auth = supabase.auth
     private val realtime = supabase.realtime
+    private val storage = supabase.storage
 
     private val _loading = mutableStateOf(false)
     val loading: State<Boolean> = _loading
@@ -50,13 +58,11 @@ class ChatViewModel : ViewModel() {
         requestSubscriptionJob = channel.postgresChangeFlow<PostgresAction>(schema = "public") {
             table = "chat_requests"
         }.onEach { action ->
-            // Fast sync: refresh for any change in chat requests
             fetchChatRequests()
 
             if (action is PostgresAction.Insert) {
                 val newRequest = action.decodeRecord<ChatRequest>()
                 if (newRequest.receiverId == currentUser.id) {
-                    // Fetch details to show in notification
                     viewModelScope.launch {
                         try {
                             val senderProfile = postgrest["profiles"].select {
@@ -72,7 +78,7 @@ class ChatViewModel : ViewModel() {
                                 senderProfile.fullName,
                                 book.title
                             )
-                            fetchChatRequests() // Refresh list
+                            fetchChatRequests()
                         } catch (e: Exception) {
                             println("Error fetching notification details: ${e.message}")
                         }
@@ -169,6 +175,18 @@ class ChatViewModel : ViewModel() {
                 }) {
                     filter { ChatRequest::id eq requestId }
                 }
+                
+                // Add system message
+                val systemContent = when(status) {
+                    "accepted" -> "Request was accepted."
+                    "rejected" -> "Request was rejected."
+                    "delivered" -> "Book has been delivered."
+                    "completed" -> "Swap was marked as completed."
+                    "rented" -> "Book was marked as rented."
+                    else -> "Status updated to $status"
+                }
+                sendSystemMessage(requestId, systemContent)
+                
                 fetchChatRequests()
             } catch (e: Exception) {
                 _error.value = "Failed to update status: ${e.message}"
@@ -179,14 +197,13 @@ class ChatViewModel : ViewModel() {
     fun sendMessage(chatRequestId: Long, content: String) {
         val currentUser = auth.currentUserOrNull() ?: return
         
-        // Optimistic update
-        val tempId = System.currentTimeMillis() * -1 // Temporary negative ID
+        val tempId = System.currentTimeMillis() * -1
         val newMessage = Message(
             id = tempId,
             chatRequestId = chatRequestId,
             senderId = currentUser.id,
             content = content,
-            createdAt = null // Will be set by DB
+            createdAt = null
         )
         _messages.add(newMessage)
 
@@ -198,11 +215,52 @@ class ChatViewModel : ViewModel() {
                     content = content
                 )
                 postgrest["messages"].insert(message)
-                // We don't need to manually remove tempId because fetchMessages 
-                // or the realtime listener will eventually refresh the list
             } catch (e: Exception) {
-                _messages.remove(newMessage) // Rollback on error
+                _messages.remove(newMessage)
                 _error.value = "Failed to send message: ${e.message}"
+            }
+        }
+    }
+
+    private suspend fun compressImage(bitmap: Bitmap): ByteArray = withContext(Dispatchers.Default) {
+        var quality = 80
+        val outputStream = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream)
+        var compressedBytes = outputStream.toByteArray()
+        
+        while (compressedBytes.size > 500 * 1024 && quality > 10) {
+            quality -= 10
+            val loopStream = ByteArrayOutputStream()
+            bitmap.compress(Bitmap.CompressFormat.JPEG, quality, loopStream)
+            compressedBytes = loopStream.toByteArray()
+        }
+        compressedBytes
+    }
+
+    fun sendImageMessage(chatRequestId: Long, imageBitmap: Bitmap) {
+        val currentUser = auth.currentUserOrNull() ?: return
+        
+        _loading.value = true
+        viewModelScope.launch {
+            try {
+                val compressedBytes = compressImage(imageBitmap)
+                val fileName = "${chatRequestId}/${UUID.randomUUID()}.jpg"
+                val bucket = storage.from("chat-media")
+                bucket.upload(fileName, compressedBytes)
+                val imageUrl = bucket.publicUrl(fileName)
+
+                val message = Message(
+                    chatRequestId = chatRequestId,
+                    senderId = currentUser.id,
+                    content = "[Image]",
+                    messageType = "image",
+                    mediaUrl = imageUrl
+                )
+                postgrest["messages"].insert(message)
+            } catch (e: Exception) {
+                _error.value = "Failed to send image: ${e.message}"
+            } finally {
+                _loading.value = false
             }
         }
     }
@@ -218,7 +276,6 @@ class ChatViewModel : ViewModel() {
             if (action is PostgresAction.Insert) {
                 val newMessage = action.decodeRecord<Message>()
                 if (newMessage.chatRequestId == chatRequestId) {
-                    // Replace optimistic message if it exists or add new one
                     val existingIndex = _messages.indexOfFirst { it.content == newMessage.content && it.id != null && it.id < 0 }
                     if (existingIndex != -1) {
                         _messages[existingIndex] = newMessage
@@ -267,17 +324,94 @@ class ChatViewModel : ViewModel() {
         }
     }
 
+    fun completeSwap(requestId: Long) {
+        viewModelScope.launch {
+            try {
+                postgrest["chat_requests"].update({
+                    ChatRequest::status setTo "completed"
+                }) {
+                    filter { eq("id", requestId) }
+                }
+                sendSystemMessage(requestId, "Swap was marked as completed.")
+                fetchChatRequests()
+            } catch (e: Exception) {
+                _error.value = "Failed to complete swap: ${e.message}"
+            }
+        }
+    }
+
+    fun markAsRented(requestId: Long) {
+        viewModelScope.launch {
+            try {
+                postgrest["chat_requests"].update({
+                    ChatRequest::status setTo "rented"
+                }) {
+                    filter { eq("id", requestId) }
+                }
+                sendSystemMessage(requestId, "Book was marked as rented.")
+                fetchChatRequests()
+            } catch (e: Exception) {
+                _error.value = "Failed to mark as rented: ${e.message}"
+            }
+        }
+    }
+
+    fun markAsDelivered(requestId: Long) {
+        viewModelScope.launch {
+            try {
+                postgrest["chat_requests"].update({
+                    ChatRequest::status setTo "delivered"
+                }) {
+                    filter { eq("id", requestId) }
+                }
+                sendSystemMessage(requestId, "Book has been delivered.")
+                fetchChatRequests()
+            } catch (e: Exception) {
+                _error.value = "Failed to mark as delivered: ${e.message}"
+            }
+        }
+    }
+
+    fun unmarkStatus(requestId: Long) {
+        viewModelScope.launch {
+            try {
+                postgrest["chat_requests"].update({
+                    ChatRequest::status setTo "accepted"
+                }) {
+                    filter { eq("id", requestId) }
+                }
+                sendSystemMessage(requestId, "Status was reverted to accepted.")
+                fetchChatRequests()
+            } catch (e: Exception) {
+                _error.value = "Failed to revert status: ${e.message}"
+            }
+        }
+    }
+
+    private suspend fun sendSystemMessage(chatRequestId: Long, content: String) {
+        try {
+            val message = Message(
+                chatRequestId = chatRequestId,
+                senderId = "system",
+                content = content,
+                messageType = "system"
+            )
+            postgrest["messages"].insert(message)
+        } catch (e: Exception) {
+            println("Failed to send system message: ${e.message}")
+        }
+    }
+
     fun blockUser(userId: String) {
         val currentUser = auth.currentUserOrNull() ?: return
         viewModelScope.launch {
             try {
-                // Instead of deleting, we "hide" the chats by changing status to 'blocked'
                 postgrest["chat_requests"].update({
                     ChatRequest::status setTo "blocked"
                 }) {
                     filter {
                         and {
-                            eq("status", "accepted") // Only hide currently active chats
+                            eq("status", "accepted")
                             or {
                                 and {
                                     eq("sender_id", currentUser.id)
@@ -292,7 +426,6 @@ class ChatViewModel : ViewModel() {
                     }
                 }
                 
-                // Add to blocked_users table to keep track
                 postgrest["blocked_users"].insert(mapOf(
                     "blocker_id" to currentUser.id,
                     "blocked_id" to userId
@@ -309,12 +442,10 @@ class ChatViewModel : ViewModel() {
         val currentUser = auth.currentUserOrNull() ?: return
         viewModelScope.launch {
             try {
-                // 1. Remove from blocked_users table
                 postgrest["blocked_users"].delete {
                     filter { eq("id", blockId) }
                 }
 
-                // 2. Restore chats by changing status back to 'accepted'
                 postgrest["chat_requests"].update({
                     ChatRequest::status setTo "accepted"
                 }) {

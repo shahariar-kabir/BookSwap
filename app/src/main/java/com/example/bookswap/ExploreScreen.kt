@@ -14,7 +14,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -22,7 +21,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,39 +60,15 @@ fun ExploreScreen(
         matchesSearch && matchesCategory && matchesAvailability
     }
 
-    Scaffold(
+    BookSwapScaffold(
+        title = "Explore",
         bottomBar = {
-            NavigationBar(containerColor = Color.White, tonalElevation = 8.dp) {
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onHomeClick,
-                    icon = { Icon(Icons.Default.Home, contentDescription = null) },
-                    label = { Text("Home") }
-                )
-                NavigationBarItem(
-                    selected = true,
-                    onClick = { },
-                    icon = { Icon(Icons.Default.Explore, contentDescription = null) },
-                    label = { Text("Explore") }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onAddClick,
-                    icon = { Icon(Icons.Default.AddCircle, contentDescription = null, modifier = Modifier.size(32.dp)) },
-                    label = { Text("Add") }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onChatClick,
-                    icon = { Icon(Icons.Default.Message, contentDescription = null) },
-                    label = { Text("Chats") }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onProfileClick,
-                    icon = { Icon(Icons.Default.Person, contentDescription = null) },
-                    label = { Text("Profile") }
-                )
+            BookSwapNavigationBar {
+                BookSwapNavItem(selected = false, onClick = onHomeClick, icon = Icons.Default.Home, label = "Home")
+                BookSwapNavItem(selected = true, onClick = {}, icon = Icons.Default.Explore, label = "Explore")
+                BookSwapNavItem(selected = false, onClick = onAddClick, icon = Icons.Default.AddCircle, label = "Add")
+                BookSwapNavItem(selected = false, onClick = onChatClick, icon = Icons.Default.Message, label = "Chats")
+                BookSwapNavItem(selected = false, onClick = onProfileClick, icon = Icons.Default.Person, label = "Profile")
             }
         }
     ) { paddingValues ->
@@ -102,44 +76,21 @@ fun ExploreScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .background(Color(0xFFF8F9FA))
         ) {
-            // Explore Search Header
-            Surface(
-                color = Color.White,
-                shadowElevation = 2.dp,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(bottom = 16.dp)) {
-                    Text(
-                        text = "Explore",
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Black,
-                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
-                    )
-                    
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-                        placeholder = { Text("Search by title, author, or city...") },
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray) },
-                        trailingIcon = {
-                            if (searchQuery.isNotEmpty()) {
-                                IconButton(onClick = { searchQuery = "" }) { Icon(Icons.Default.Close, contentDescription = null) }
-                            }
-                            // Filter icon removed for cleaner UI
-                        },
-                        shape = RoundedCornerShape(16.dp),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color(0xFFE3F2FD),
-                            unfocusedBorderColor = Color(0xFFEEEEEE),
-                            focusedContainerColor = Color(0xFFF8F9FA),
-                            unfocusedContainerColor = Color(0xFFF8F9FA)
-                        )
-                    )
-                }
+            // Search Bar
+            Column(modifier = Modifier.padding(bottom = 8.dp)) {
+                BookSwapTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    label = "Search by title, author, city",
+                    modifier = Modifier.padding(horizontal = 24.dp),
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) { Icon(Icons.Default.Close, contentDescription = null) }
+                        }
+                    }
+                )
             }
 
             // Global Explore Area
@@ -147,9 +98,9 @@ fun ExploreScreen(
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                     Text(
                         "Browse by Category",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp,
-                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
                     )
                     
                     LazyRow(
@@ -168,10 +119,19 @@ fun ExploreScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Trending Now", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Text(
+                            "Trending Now", 
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Available", fontSize = 14.sp, color = Color.Gray)
-                            Switch(checked = availableOnly, onCheckedChange = { availableOnly = it }, modifier = Modifier.scale(0.7f))
+                            Text("Available", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Switch(
+                                checked = availableOnly, 
+                                onCheckedChange = { availableOnly = it }, 
+                                modifier = Modifier.scale(0.7f),
+                                colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.primary)
+                            )
                         }
                     }
 
@@ -182,6 +142,8 @@ fun ExploreScreen(
                         onFavoriteToggle = { viewModel.toggleFavorite(it) },
                         windowSize = windowSize
                     )
+                    
+                    Spacer(modifier = Modifier.height(100.dp)) // Extra space
                 }
             } else {
                 Column {
@@ -192,7 +154,8 @@ fun ExploreScreen(
                         FilterChip(
                             selected = selectedCategory == "All",
                             onClick = { selectedCategory = "All" },
-                            label = { Text("All Results") }
+                            label = { Text("All Results") },
+                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f), selectedLabelColor = MaterialTheme.colorScheme.primary)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         if (selectedCategory != "All") {
@@ -200,7 +163,8 @@ fun ExploreScreen(
                                 selected = true,
                                 onClick = { selectedCategory = "All" },
                                 label = { Text(selectedCategory) },
-                                trailingIcon = { Icon(Icons.Default.Close, null, modifier = Modifier.size(14.dp)) }
+                                trailingIcon = { Icon(Icons.Default.Close, null, modifier = Modifier.size(14.dp)) },
+                                colors = InputChipDefaults.inputChipColors(selectedContainerColor = MaterialTheme.colorScheme.primary, selectedLabelColor = Color.Black)
                             )
                         }
                     }
@@ -218,6 +182,7 @@ fun ExploreScreen(
                             onFavoriteToggle = { viewModel.toggleFavorite(it) },
                             windowSize = windowSize
                         )
+                        Box(modifier = Modifier.fillMaxWidth().height(100.dp)) // Padding
                     }
                 }
             }
@@ -231,24 +196,30 @@ data class CategoryItem(val name: String, val icon: ImageVector, val color: Colo
 fun CategoryTile(category: CategoryItem, onClick: () -> Unit) {
     Surface(
         modifier = Modifier
-            .width(90.dp)
-            .height(100.dp)
-            .clickable { onClick() },
-        color = category.color,
-        shape = RoundedCornerShape(20.dp)
+            .width(80.dp)
+            .height(90.dp)
+            .clickable { onClick() }
+            .floatingElement(shape = RoundedCornerShape(16.dp)),
+        color = Color.Transparent,
+        shape = RoundedCornerShape(16.dp)
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(8.dp),
+            modifier = Modifier.fillMaxSize().padding(4.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Icon(category.icon, contentDescription = null, modifier = Modifier.size(28.dp), tint = Color.DarkGray)
-            Spacer(modifier = Modifier.height(6.dp))
+            Icon(
+                category.icon, 
+                contentDescription = null, 
+                modifier = Modifier.size(24.dp), 
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = category.name, 
+                style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold, 
-                fontSize = 13.sp, 
-                color = Color.DarkGray,
+                color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -277,8 +248,8 @@ fun DiscoveryGrid(
                 book = book,
                 isFavorite = favoriteIds.contains(book.id),
                 onFavoriteToggle = { book.id?.let { onFavoriteToggle(it) } },
-                onClick = { onBookClick(book) },
-                backgroundColor = Color.White,
+                onClick = { book.id?.let { onBookClick(book) } },
+                backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
                 windowSize = windowSize,
                 width = if (windowSize.widthSizeClass == WindowSizeClass.COMPACT) 165.dp else 220.dp,
                 height = if (windowSize.widthSizeClass == WindowSizeClass.COMPACT) 250.dp else 320.dp
@@ -291,10 +262,11 @@ fun DiscoveryGrid(
 fun EmptySearchResults(onClear: () -> Unit) {
     Box(modifier = Modifier.fillMaxSize().padding(48.dp), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(Icons.Default.SearchOff, null, modifier = Modifier.size(64.dp), tint = Color.LightGray)
+            Icon(Icons.Default.SearchOff, null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
             Spacer(modifier = Modifier.height(16.dp))
-            Text("No results found", color = Color.Gray, fontWeight = FontWeight.Medium)
-            TextButton(onClick = onClear) { Text("Clear Search") }
+            Text("No results found", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            TextButton(onClick = onClear) { Text("Clear Search", color = MaterialTheme.colorScheme.primary) }
+            Spacer(modifier = Modifier.height(100.dp))
         }
     }
 }

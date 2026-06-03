@@ -2,6 +2,7 @@ package com.example.bookswap
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 @Serializable
 data class ChatRequest(
@@ -18,13 +19,16 @@ data class ChatRequest(
     val createdAt: String? = null,
     
     // UI Helper fields (not saved in chat_requests table directly)
-    var senderName: String? = null,
-    var senderUsername: String? = null,
-    var senderAvatar: String? = null,
-    var receiverName: String? = null,
-    var receiverUsername: String? = null,
-    var receiverAvatar: String? = null,
-    var bookTitle: String? = null
+    @Transient var senderName: String? = null,
+    @Transient var senderUsername: String? = null,
+    @Transient var senderAvatar: String? = null,
+    @Transient var receiverName: String? = null,
+    @Transient var receiverUsername: String? = null,
+    @Transient var receiverAvatar: String? = null,
+    @Transient var bookTitle: String? = null,
+    @Transient var lastMessage: String? = null,
+    @Transient var lastMessageTime: String? = null,
+    @Transient var unreadCount: Int = 0
 )
 
 @Serializable
@@ -35,6 +39,12 @@ data class Message(
     @SerialName("sender_id")
     val senderId: String,
     val content: String,
+    @SerialName("message_type")
+    val messageType: String = "text", // "text", "image", "system"
+    @SerialName("media_url")
+    val mediaUrl: String? = null,
+    @SerialName("is_read")
+    val isRead: Boolean = false,
     @SerialName("created_at")
     val createdAt: String? = null
 )
@@ -50,7 +60,7 @@ data class BlockedUser(
     val createdAt: String? = null,
     
     // UI Helper fields
-    var blockedName: String? = null,
-    var blockedUsername: String? = null,
-    var blockedAvatar: String? = null
+    @Transient var blockedName: String? = null,
+    @Transient var blockedUsername: String? = null,
+    @Transient var blockedAvatar: String? = null
 )

@@ -34,9 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.example.bookswap.ui.theme.CyanMain
 
 @Composable
 fun ProfileScreen(
@@ -69,7 +67,6 @@ fun ProfileScreen(
     var showEditDialog by remember { mutableStateOf(false) }
     var selectedTabIndex by remember { mutableIntStateOf(initialTabIndex) }
     
-    // Updated tabs: Wishlist instead of Swaps
     val tabs = if (isCurrentUser) listOf("My Books", "Favorites", "Wishlist") else listOf("Books")
 
     val chatRequests = chatViewModel?.chatRequests ?: emptyList()
@@ -112,7 +109,7 @@ fun ProfileScreen(
                         modifier = Modifier
                             .size(80.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFFF5F5F5))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
                             .clickable { launcher.launch("image/*") },
                         contentAlignment = Alignment.Center
                     ) {
@@ -131,103 +128,85 @@ fun ProfileScreen(
                                 contentScale = ContentScale.Crop
                             )
                         } else {
-                            Icon(Icons.Default.AddAPhoto, contentDescription = null, tint = Color.Gray)
+                            Icon(Icons.Default.AddAPhoto, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         }
                     }
-                    Text("Change Photo", fontSize = 12.sp, color = CyanMain)
+                    Text("Change Photo", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    OutlinedTextField(
+                    BookSwapTextField(
                         value = fullName,
                         onValueChange = { fullName = it },
-                        label = { Text("Full Name") },
-                        modifier = Modifier.fillMaxWidth()
+                        label = "Full Name"
                     )
-                    OutlinedTextField(
+                    BookSwapTextField(
                         value = username,
                         onValueChange = { username = it },
-                        label = { Text("Username") },
-                        leadingIcon = { Text("@", modifier = Modifier.padding(start = 12.dp), color = Color.Gray) },
-                        modifier = Modifier.fillMaxWidth()
+                        label = "Username",
+                        leadingIcon = { Text("@", modifier = Modifier.padding(start = 12.dp), color = MaterialTheme.colorScheme.onSurfaceVariant) }
                     )
-                    OutlinedTextField(
+                    BookSwapTextField(
                         value = phone,
                         onValueChange = { phone = it },
-                        label = { Text("Phone Number") },
-                        modifier = Modifier.fillMaxWidth()
+                        label = "Phone Number"
                     )
-                    OutlinedTextField(
+                    BookSwapTextField(
                         value = address,
                         onValueChange = { address = it },
-                        label = { Text("Address") },
-                        modifier = Modifier.fillMaxWidth()
+                        label = "Address"
                     )
                 }
             },
             confirmButton = {
-                Button(
+                BookSwapButton(
+                    text = "Save",
                     onClick = {
                         onUpdateProfile(fullName, username, phone, address, imageBitmap)
                         showEditDialog = false
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = CyanMain)
-                ) {
-                    Text("Save Changes", color = Color.Black, fontWeight = FontWeight.Bold)
-                }
+                    modifier = Modifier.width(100.dp)
+                )
             },
             dismissButton = {
                 TextButton(onClick = { showEditDialog = false }) {
-                    Text("Cancel")
+                    Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
-            shape = RoundedCornerShape(24.dp),
-            containerColor = Color.White
+            shape = RoundedCornerShape(24.dp)
         )
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF8F9FA))
-            .verticalScroll(scrollState)
-    ) {
-        // Top Header
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            color = Color.White,
-            shadowElevation = 2.dp,
-            shape = RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp)
+    BookSwapScaffold(
+        title = if (isCurrentUser) "My Profile" else "User Profile",
+        showBack = true,
+        onBack = onBack,
+        actions = {
+            if (isCurrentUser) {
+                IconButton(onClick = onLogout) {
+                    Icon(Icons.Outlined.Logout, contentDescription = "Logout", tint = MaterialTheme.colorScheme.error)
+                }
+            }
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .verticalScroll(scrollState)
         ) {
+            // Profile Info
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .systemBarsPadding()
-                    .padding(bottom = 40.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+                    .padding(vertical = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                    if (isCurrentUser) {
-                        IconButton(onClick = onLogout) {
-                            Icon(Icons.Outlined.Logout, contentDescription = "Logout", tint = Color.Red)
-                        }
-                    }
-                }
-
                 Box(
                     modifier = Modifier
                         .size(if (windowSize.widthSizeClass == WindowSizeClass.COMPACT) 100.dp else 140.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFFE3F2FD)),
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
                     contentAlignment = Alignment.Center
                 ) {
                     if (profile?.avatarUrl != null) {
@@ -242,7 +221,7 @@ fun ProfileScreen(
                             Icons.Default.Person,
                             contentDescription = null,
                             modifier = Modifier.size(if (windowSize.widthSizeClass == WindowSizeClass.COMPACT) 60.dp else 80.dp),
-                            tint = Color(0xFF1976D2)
+                            tint = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
@@ -251,75 +230,72 @@ fun ProfileScreen(
 
                 Text(
                     text = profile?.fullName ?: userName,
-                    fontSize = if (windowSize.widthSizeClass == WindowSizeClass.COMPACT) 24.sp else 32.sp,
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onBackground,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = profile?.username?.let { "@$it" } ?: "Book Enthusiast",
-                    color = Color.Gray,
-                    fontSize = 14.sp
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-        }
 
-        // Stat Cards Row
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 24.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            StatCard(
-                modifier = Modifier.weight(1f),
-                count = booksCount.toString(), 
-                label = "Books", 
-                icon = Icons.Default.MenuBook, 
-                color = Color(0xFFE8F5E9), 
-                contentColor = Color(0xFF2E7D32),
-                onClick = { selectedTabIndex = 0 }
-            )
-            if (isCurrentUser) {
+            // Stat Cards Row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 StatCard(
                     modifier = Modifier.weight(1f),
-                    count = favoritesCount.toString(), 
-                    label = "Favorites", 
-                    icon = Icons.Default.Favorite, 
-                    color = Color(0xFFFFEBEE), 
-                    contentColor = Color(0xFFD32F2F),
-                    onClick = { selectedTabIndex = 1 }
+                    count = booksCount.toString(), 
+                    label = "Books", 
+                    icon = Icons.Default.MenuBook, 
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), 
+                    contentColor = MaterialTheme.colorScheme.primary,
+                    onClick = { selectedTabIndex = 0 }
                 )
-            }
-            StatCard(
-                modifier = Modifier.weight(1f),
-                count = swapsCount.toString(), 
-                label = "Swaps", 
-                icon = Icons.Default.SwapHoriz, 
-                color = Color(0xFFE3F2FD), 
-                contentColor = Color(0xFF1976D2)
-            )
-            if (isCurrentUser) {
+                if (isCurrentUser) {
+                    StatCard(
+                        modifier = Modifier.weight(1f),
+                        count = favoritesCount.toString(), 
+                        label = "Favorites", 
+                        icon = Icons.Default.Favorite, 
+                        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f), 
+                        contentColor = MaterialTheme.colorScheme.secondary,
+                        onClick = { selectedTabIndex = 1 }
+                    )
+                }
                 StatCard(
                     modifier = Modifier.weight(1f),
-                    count = wishlistCount.toString(),
-                    label = "Wishlist", 
-                    icon = Icons.Default.Bookmark, 
-                    color = Color(0xFFF3E5F5), 
-                    contentColor = Color(0xFF7B1FA2),
-                    onClick = { selectedTabIndex = 2 }
+                    count = swapsCount.toString(), 
+                    label = "Swaps", 
+                    icon = Icons.Default.SwapHoriz, 
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), 
+                    contentColor = MaterialTheme.colorScheme.primary
                 )
+                if (isCurrentUser) {
+                    StatCard(
+                        modifier = Modifier.weight(1f),
+                        count = wishlistCount.toString(),
+                        label = "Wishlist", 
+                        icon = Icons.Default.Bookmark, 
+                        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f), 
+                        contentColor = MaterialTheme.colorScheme.secondary,
+                        onClick = { selectedTabIndex = 2 }
+                    )
+                }
             }
-        }
 
-        // Tab Selection
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            color = Color.White,
-            shadowElevation = 1.dp
-        ) {
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Tab Selection
             TabRow(
                 selectedTabIndex = selectedTabIndex,
-                containerColor = Color.White,
-                contentColor = Color(0xFF1976D2),
+                containerColor = Color.Transparent,
+                contentColor = MaterialTheme.colorScheme.primary,
                 divider = {}
             ) {
                 tabs.forEachIndexed { index, title ->
@@ -329,8 +305,8 @@ fun ProfileScreen(
                         text = {
                             Text(
                                 text = title,
+                                style = MaterialTheme.typography.titleSmall,
                                 fontWeight = if (selectedTabIndex == index) FontWeight.Bold else FontWeight.Normal,
-                                fontSize = 14.sp,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -338,148 +314,143 @@ fun ProfileScreen(
                     )
                 }
             }
-        }
 
-        // Tab Content Area
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-                .heightIn(min = 200.dp)
-        ) {
-            when (selectedTabIndex) {
-                0 -> { // My Books
-                    TabHeader(
-                        title = if (isCurrentUser) "My Collection" else "Books",
-                        onSeeAll = if (myBooks.isNotEmpty()) onSeeAllMyBooks else null
-                    )
-                    if (myBooks.isEmpty()) {
-                        EmptyTabContent(message = if (isCurrentUser) "You haven't listed any books yet." else "No books listed.")
-                    } else {
-                        myBooks.take(5).forEach { book ->
-                            RecentBookRow(book = book, onClick = { onBookClick(book) })
-                            Spacer(modifier = Modifier.height(12.dp))
-                        }
-                    }
-                }
-                1 -> { // Favorites
-                    if (isCurrentUser) {
+            // Tab Content Area
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+                    .heightIn(min = 200.dp)
+            ) {
+                when (selectedTabIndex) {
+                    0 -> { // My Books
                         TabHeader(
-                            title = "Favorite Books",
-                            onSeeAll = if (favoriteBooks.isNotEmpty()) onSeeAllFavorites else null
+                            title = if (isCurrentUser) "My Collection" else "Books",
+                            onSeeAll = if (myBooks.isNotEmpty()) onSeeAllMyBooks else null
                         )
-                        if (favoriteBooks.isEmpty()) {
-                            EmptyTabContent(message = "No favorite books yet.")
+                        if (myBooks.isEmpty()) {
+                            EmptyTabContent(message = if (isCurrentUser) "You haven't listed any books yet." else "No books listed.")
                         } else {
-                            favoriteBooks.take(5).forEach { book ->
+                            myBooks.take(5).forEach { book ->
                                 RecentBookRow(book = book, onClick = { onBookClick(book) })
                                 Spacer(modifier = Modifier.height(12.dp))
                             }
                         }
-                    } else {
-                        EmptyTabContent(message = "No public swap history.")
                     }
-                }
-                2 -> { // Wishlist
-                    if (isCurrentUser) {
-                        TabHeader(
-                            title = "My Wishlist",
-                            onSeeAll = if (wishlistBooks.isNotEmpty()) onSeeAllWishlist else null
-                        )
-                        if (wishlistBooks.isEmpty()) {
-                            EmptyTabContent(message = "No books in wishlist.")
+                    1 -> { // Favorites
+                        if (isCurrentUser) {
+                            TabHeader(
+                                title = "Favorite Books",
+                                onSeeAll = if (favoriteBooks.isNotEmpty()) onSeeAllFavorites else null
+                            )
+                            if (favoriteBooks.isEmpty()) {
+                                EmptyTabContent(message = "No favorite books yet.")
+                            } else {
+                                favoriteBooks.take(5).forEach { book ->
+                                    RecentBookRow(book = book, onClick = { onBookClick(book) })
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                }
+                            }
                         } else {
-                            wishlistBooks.take(5).forEach { book ->
-                                RecentBookRow(book = book, onClick = { onBookClick(book) })
-                                Spacer(modifier = Modifier.height(12.dp))
+                            EmptyTabContent(message = "No public swap history.")
+                        }
+                    }
+                    2 -> { // Wishlist
+                        if (isCurrentUser) {
+                            TabHeader(
+                                title = "My Wishlist",
+                                onSeeAll = if (wishlistBooks.isNotEmpty()) onSeeAllWishlist else null
+                            )
+                            if (wishlistBooks.isEmpty()) {
+                                EmptyTabContent(message = "No books in wishlist.")
+                            } else {
+                                wishlistBooks.take(5).forEach { book ->
+                                    RecentBookRow(book = book, onClick = { onBookClick(book) })
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                }
                             }
                         }
                     }
                 }
             }
-        }
 
-        // Settings & Actions
-        if (isCurrentUser) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp)
-                    .padding(bottom = 32.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text(
-                    "Settings & Management",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 4.dp)
-                )
-
-                ProfileActionItem(
-                    icon = Icons.Default.Badge,
-                    title = "Personal Information",
-                    subtitle = if (showPersonalInfo) "Hide details" else "View contact details",
-                    onClick = { showPersonalInfo = !showPersonalInfo },
-                    containerColor = Color(0xFFE1F5FE),
-                    iconColor = Color(0xFF0288D1),
-                    trailingIcon = if (showPersonalInfo) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown
-                )
-
-                AnimatedVisibility(
-                    visible = showPersonalInfo,
-                    enter = expandVertically() + fadeIn(),
-                    exit = shrinkVertically() + fadeOut()
+            // Settings & Actions
+            if (isCurrentUser) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp)
+                        .padding(bottom = 32.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    Text(
+                        "Settings & Management",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+
+                    ProfileActionItem(
+                        icon = Icons.Default.Badge,
+                        title = "Personal Information",
+                        subtitle = if (showPersonalInfo) "Hide details" else "View contact details",
+                        onClick = { showPersonalInfo = !showPersonalInfo },
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        iconColor = MaterialTheme.colorScheme.primary,
+                        trailingIcon = if (showPersonalInfo) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown
+                    )
+
+                    AnimatedVisibility(
+                        visible = showPersonalInfo,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
                     ) {
-                        InfoItem(icon = Icons.Default.Email, label = "Email", value = profile?.email ?: "N/A")
-                        InfoItem(icon = Icons.Default.AlternateEmail, label = "Username", value = profile?.username?.let { "@$it" } ?: "N/A")
-                        InfoItem(icon = Icons.Default.Phone, label = "Phone", value = profile?.phone ?: "N/A")
-                        InfoItem(icon = Icons.Default.Home, label = "Address", value = profile?.address ?: "N/A")
-                        
-                        Button(
-                            onClick = { showEditDialog = true },
-                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A1A1A))
+                        Column(
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Edit Profile Information")
+                            InfoItem(icon = Icons.Default.Email, label = "Email", value = profile?.email ?: "N/A")
+                            InfoItem(icon = Icons.Default.AlternateEmail, label = "Username", value = profile?.username?.let { "@$it" } ?: "N/A")
+                            InfoItem(icon = Icons.Default.Phone, label = "Phone", value = profile?.phone ?: "N/A")
+                            InfoItem(icon = Icons.Default.Home, label = "Address", value = profile?.address ?: "N/A")
+                            
+                            BookSwapButton(
+                                text = "Edit Profile Info",
+                                onClick = { showEditDialog = true },
+                                modifier = Modifier.padding(top = 8.dp)
+                            )
                         }
                     }
+
+                    ProfileActionItem(
+                        icon = Icons.Default.Add,
+                        title = "List a New Book",
+                        subtitle = "Share your collection with the community",
+                        onClick = onAddBookClick,
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        iconColor = MaterialTheme.colorScheme.primary
+                    )
+
+                    ProfileActionItem(
+                        icon = Icons.Default.SwapCalls,
+                        title = "Swap Manager",
+                        subtitle = "Manage all incoming and outgoing requests",
+                        onClick = onSwapRequestsClick,
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        iconColor = MaterialTheme.colorScheme.primary,
+                        badgeCount = if (pendingRequestsCount > 0) pendingRequestsCount else null
+                    )
+
+                    ProfileActionItem(
+                        icon = Icons.Default.Logout,
+                        title = "Logout",
+                        subtitle = "Sign out of your session",
+                        onClick = onLogout,
+                        containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.1f),
+                        iconColor = MaterialTheme.colorScheme.error
+                    )
                 }
-
-                ProfileActionItem(
-                    icon = Icons.Default.Add,
-                    title = "List a New Book",
-                    subtitle = "Share your collection with the community",
-                    onClick = onAddBookClick,
-                    containerColor = Color(0xFFF3E5F5),
-                    iconColor = Color(0xFF7B1FA2)
-                )
-
-                // Swap Manager - Under List a New Book
-                ProfileActionItem(
-                    icon = Icons.Default.SwapCalls,
-                    title = "Swap Manager",
-                    subtitle = "Manage all incoming and outgoing requests",
-                    onClick = onSwapRequestsClick,
-                    containerColor = Color(0xFFFFF3E0),
-                    iconColor = Color(0xFFFF9800),
-                    badgeCount = if (pendingRequestsCount > 0) pendingRequestsCount else null
-                )
-
-                ProfileActionItem(
-                    icon = Icons.Default.Logout,
-                    title = "Logout",
-                    subtitle = "Sign out of your session",
-                    onClick = onLogout,
-                    containerColor = Color(0xFFFFEBEE),
-                    iconColor = Color(0xFFD32F2F)
-                )
             }
         }
     }
@@ -492,12 +463,17 @@ fun TabHeader(title: String, onSeeAll: (() -> Unit)?) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text = title, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.DarkGray)
+        Text(
+            text = title, 
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold, 
+            color = MaterialTheme.colorScheme.onBackground
+        )
         if (onSeeAll != null) {
             Text(
                 text = "See All", 
-                color = CyanMain, 
-                fontSize = 14.sp, 
+                color = MaterialTheme.colorScheme.primary, 
+                style = MaterialTheme.typography.labelLarge, 
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.clickable { onSeeAll() }
             )
@@ -511,27 +487,33 @@ fun EmptyTabContent(message: String) {
         modifier = Modifier.fillMaxWidth().padding(vertical = 40.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(text = message, color = Color.Gray, fontSize = 14.sp, textAlign = TextAlign.Center)
+        Text(
+            text = message, 
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant, 
+            textAlign = TextAlign.Center
+        )
     }
 }
 
 @Composable
 fun InfoItem(icon: ImageVector, label: String, value: String) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .floatingElement(shape = RoundedCornerShape(16.dp)),
         shape = RoundedCornerShape(16.dp),
-        color = Color.White,
-        shadowElevation = 1.dp
+        color = Color.Transparent
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(icon, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(20.dp))
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
             Spacer(modifier = Modifier.width(16.dp))
             Column {
-                Text(text = label, fontSize = 12.sp, color = Color.Gray)
-                Text(text = value, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                Text(text = label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(text = value, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
             }
         }
     }
@@ -550,10 +532,10 @@ fun StatCard(
     Surface(
         modifier = modifier
             .height(90.dp)
-            .clickable { onClick() },
+            .clickable { onClick() }
+            .floatingElement(shape = RoundedCornerShape(18.dp)),
         shape = RoundedCornerShape(18.dp),
-        color = Color.White,
-        shadowElevation = 2.dp
+        color = Color.Transparent
     ) {
         Column(
             modifier = Modifier.padding(4.dp),
@@ -564,7 +546,7 @@ fun StatCard(
                 modifier = Modifier
                     .size(32.dp)
                     .clip(CircleShape)
-                    .background(color),
+                    .background(color.copy(alpha = 0.2f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(icon, contentDescription = null, tint = contentColor, modifier = Modifier.size(18.dp))
@@ -572,15 +554,16 @@ fun StatCard(
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = count, 
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.ExtraBold, 
-                fontSize = 16.sp,
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = label, 
-                fontSize = 10.sp, 
-                color = Color.Gray,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
@@ -604,10 +587,10 @@ fun ProfileActionItem(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() },
+            .clickable { onClick() }
+            .floatingElement(shape = RoundedCornerShape(16.dp)),
         shape = RoundedCornerShape(16.dp),
-        color = Color.White,
-        shadowElevation = 1.dp
+        color = Color.Transparent
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -617,7 +600,7 @@ fun ProfileActionItem(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(containerColor),
+                    .background(containerColor.copy(alpha = 0.2f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(icon, contentDescription = null, tint = iconColor)
@@ -625,18 +608,23 @@ fun ProfileActionItem(
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = title, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(
+                        text = title, 
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
                     if (badgeCount != null) {
                         Spacer(modifier = Modifier.width(8.dp))
                         Surface(
-                            color = Color.Red,
+                            color = MaterialTheme.colorScheme.error,
                             shape = CircleShape,
                             modifier = Modifier.size(20.dp)
                         ) {
                             Text(
                                 text = badgeCount.toString(),
                                 color = Color.White,
-                                fontSize = 12.sp,
+                                style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier.wrapContentHeight()
@@ -644,9 +632,13 @@ fun ProfileActionItem(
                         }
                     }
                 }
-                Text(text = subtitle, color = Color.Gray, fontSize = 12.sp)
+                Text(
+                    text = subtitle, 
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
-            Icon(trailingIcon, contentDescription = null, tint = Color.LightGray)
+            Icon(trailingIcon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
         }
     }
 }

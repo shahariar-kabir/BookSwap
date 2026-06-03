@@ -26,10 +26,10 @@ fun SplashScreen() {
     
     val gradient = Brush.linearGradient(
         colors = listOf(
-            Color(0xFFBA68C8), // Light Purple
-            Color(0xFF9C27B0), // Purple
-            Color(0xFF7B1FA2), // Dark Purple
-            Color(0xFF4A148C)  // Deep Purple
+            Color(0xFFBA68C8).copy(alpha = 0.4f), // Light Purple
+            Color(0xFF9C27B0).copy(alpha = 0.4f), // Purple
+            Color(0xFF7B1FA2).copy(alpha = 0.4f), // Dark Purple
+            Color(0xFF4A148C).copy(alpha = 0.4f)  // Deep Purple
         ),
         start = Offset(0f, 0f),
         end = Offset.Infinite

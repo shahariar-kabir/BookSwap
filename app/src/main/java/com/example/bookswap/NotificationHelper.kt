@@ -17,15 +17,53 @@ object NotificationHelper {
     private const val CHANNEL_NAME = "Swap Requests"
     private const val CHANNEL_DESC = "Notifications for incoming book swap requests"
 
+    private const val MSG_CHANNEL_ID = "chat_messages_channel"
+    private const val MSG_CHANNEL_NAME = "Chat Messages"
+    private const val MSG_CHANNEL_DESC = "Notifications for new chat messages"
+
     fun createNotificationChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val importance = NotificationManager.IMPORTANCE_DEFAULT
-            val channel = NotificationChannel(CHANNEL_ID, CHANNEL_NAME, importance).apply {
-                description = CHANNEL_DESC
-            }
             val notificationManager: NotificationManager =
                 context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannel(channel)
+
+            // Swap Requests Channel
+            val swapChannel = NotificationChannel(CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_DEFAULT).apply {
+                description = CHANNEL_DESC
+            }
+            notificationManager.createNotificationChannel(swapChannel)
+
+            // Chat Messages Channel
+            val chatChannel = NotificationChannel(MSG_CHANNEL_ID, MSG_CHANNEL_NAME, NotificationManager.IMPORTANCE_HIGH).apply {
+                description = MSG_CHANNEL_DESC
+            }
+            notificationManager.createNotificationChannel(chatChannel)
+        }
+    }
+
+    fun showMessageNotification(context: Context, senderName: String, messageContent: String) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                return
+            }
+        }
+
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        val pendingIntent: PendingIntent = PendingIntent.getActivity(
+            context, 0, intent, PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val builder = NotificationCompat.Builder(context, MSG_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle(senderName)
+            .setContentText(messageContent)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+
+        with(NotificationManagerCompat.from(context)) {
+            notify(senderName.hashCode(), builder.build())
         }
     }
 

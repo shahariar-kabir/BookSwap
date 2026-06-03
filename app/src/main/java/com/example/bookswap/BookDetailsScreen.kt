@@ -22,10 +22,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.example.bookswap.ui.theme.CyanMain
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BookDetailsScreen(
     bookId: Long,
@@ -69,11 +67,10 @@ fun BookDetailsScreen(
             text = { Text(error ?: "An unexpected error occurred.") },
             confirmButton = {
                 TextButton(onClick = { bookViewModel.clearError() }) {
-                    Text("OK", color = CyanMain, fontWeight = FontWeight.Bold)
+                    Text("OK", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                 }
             },
-            shape = RoundedCornerShape(24.dp),
-            containerColor = Color.White
+            shape = RoundedCornerShape(24.dp)
         )
     }
 
@@ -114,12 +111,19 @@ fun BookDetailsScreen(
         )
     }
 
-    Scaffold(
+    BookSwapScaffold(
         bottomBar = {
             if (isOwner) {
-                Surface(modifier = Modifier.fillMaxWidth(), shadowElevation = 8.dp, color = Color.White) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .floatingElement(shape = RoundedCornerShape(24.dp)),
+                    shape = RoundedCornerShape(24.dp),
+                    color = Color.Transparent
+                ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -127,26 +131,30 @@ fun BookDetailsScreen(
                             Switch(
                                 checked = book.isAvailable,
                                 onCheckedChange = { book.id?.let { id -> bookViewModel.updateBookAvailability(id, it) } },
-                                colors = SwitchDefaults.colors(checkedThumbColor = CyanMain)
+                                colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.primary)
                             )
                             Spacer(modifier = Modifier.width(12.dp))
-                            Text(if (book.isAvailable) "Available" else "Busy", fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                            Text(
+                                if (book.isAvailable) "Available" else "Busy", 
+                                style = MaterialTheme.typography.titleMedium, 
+                                fontWeight = FontWeight.Bold, 
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1
+                            )
                         }
-                        Button(
+                        IconButton(
                             onClick = onEditClick,
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A1A1A)),
-                            shape = RoundedCornerShape(12.dp)
+                            modifier = Modifier.background(MaterialTheme.colorScheme.primary, CircleShape).size(40.dp)
                         ) {
-                            Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Edit Info", softWrap = false)
+                            Icon(Icons.Default.Edit, contentDescription = null, tint = Color.Black, modifier = Modifier.size(20.dp))
                         }
                     }
                 }
             } else {
                 Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp)) {
                     if (book.isAvailable) {
-                        Button(
+                        BookSwapButton(
+                            text = "Swap Now",
                             onClick = { 
                                 scope.launch {
                                     chatViewModel.sendChatRequest(
@@ -157,21 +165,8 @@ fun BookDetailsScreen(
                                     )
                                 }
                             },
-                            modifier = Modifier.fillMaxWidth().height(56.dp),
-                            enabled = !loading,
-                            shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A1A1A))
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-                                if (loading) {
-                                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
-                                } else {
-                                    Text("Swap Now", fontSize = 18.sp, fontWeight = FontWeight.Bold, softWrap = false)
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Icon(Icons.Default.Send, contentDescription = null, modifier = Modifier.size(20.dp))
-                                }
-                            }
-                        }
+                            isLoading = loading
+                        )
                     }
 
                     if (book.isForRent && book.rentalPricePerDay != null) {
@@ -189,23 +184,24 @@ fun BookDetailsScreen(
                             },
                             modifier = Modifier.fillMaxWidth().height(56.dp),
                             enabled = !loading,
-                            shape = RoundedCornerShape(16.dp),
-                            border = androidx.compose.foundation.BorderStroke(2.dp, Color(0xFFE57373))
+                            shape = RoundedCornerShape(20.dp),
+                            border = androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.secondary)
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                                 Text(
                                     text = "Rent for $${book.rentalPricePerDay}/day", 
-                                    fontSize = 16.sp, 
+                                    style = MaterialTheme.typography.titleMedium, 
                                     fontWeight = FontWeight.Bold, 
-                                    color = Color(0xFFE57373),
+                                    color = MaterialTheme.colorScheme.secondary,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Icon(Icons.Default.Schedule, contentDescription = null, modifier = Modifier.size(20.dp), tint = Color(0xFFE57373))
+                                Icon(Icons.Default.Schedule, contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.secondary)
                             }
                         }
                     }
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
             }
         }
@@ -214,14 +210,14 @@ fun BookDetailsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .background(Color.White)
                 .verticalScroll(scrollState)
         ) {
             Box(modifier = Modifier.fillMaxWidth().height(if (windowSize.heightSizeClass == WindowSizeClass.COMPACT) 300.dp else 420.dp).padding(16.dp)) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     shape = RoundedCornerShape(32.dp),
-                    color = if (book.imageUrl == null) (if (book.id == 1L) Color(0xFFE57373) else Color(0xFFFFB74D)) else Color.Transparent
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
                 ) {
                     if (book.imageUrl != null) {
                         AsyncImage(model = book.imageUrl, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
@@ -256,30 +252,34 @@ fun BookDetailsScreen(
                             Icon(
                                 imageVector = if (isWishlisted) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder, 
                                 contentDescription = "Wishlist", 
-                                tint = if (isWishlisted) CyanMain else Color.White
+                                tint = if (isWishlisted) MaterialTheme.colorScheme.primary else Color.White
                             )
                         }
                     }
                 }
 
-                Surface(modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp).fillMaxWidth(), shape = RoundedCornerShape(20.dp), color = Color.Black.copy(alpha = 0.6f)) {
+                Surface(
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp).fillMaxWidth(), 
+                    shape = RoundedCornerShape(20.dp), 
+                    color = Color.Black.copy(alpha = 0.7f)
+                ) {
                     Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = book.title, 
                                 color = Color.White, 
-                                fontSize = 20.sp, 
+                                style = MaterialTheme.typography.titleLarge, 
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.AccountCircle, contentDescription = null, tint = Color(0xFF4FC3F7), modifier = Modifier.size(20.dp))
+                                Icon(Icons.Default.AccountCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = if (isOwner) "You (Owner)" else book.owner, 
                                     color = Color.White.copy(alpha = 0.8f), 
-                                    fontSize = 14.sp,
+                                    style = MaterialTheme.typography.bodyMedium,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -287,8 +287,8 @@ fun BookDetailsScreen(
                         }
                         Spacer(modifier = Modifier.width(16.dp))
                         Column(horizontalAlignment = Alignment.End) {
-                            Text("Swaps", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
-                            Text(text = book.swaps.toString(), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                            Text("Swaps", color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelSmall)
+                            Text(text = book.swaps.toString(), color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -303,12 +303,12 @@ fun BookDetailsScreen(
                     InfoChip(
                         icon = if (book.isAvailable) Icons.Default.CheckCircle else Icons.Default.Cancel,
                         text = if (book.isAvailable) "Available" else "Busy",
-                        bgColor = if (book.isAvailable) Color(0xFFE8F5E9) else Color(0xFFFFEBEE)
+                        bgColor = if (book.isAvailable) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.error.copy(alpha = 0.2f)
                     )
                     InfoChip(
                         icon = Icons.Default.Sell,
                         text = if (book.isForRent) "Rentable" else "Swap Only",
-                        bgColor = if (book.isForRent) Color(0xFFE3F2FD) else Color(0xFFF5F5F5)
+                        bgColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)
                     )
                     RatingChip(
                         rating = book.averageRating ?: 0.0,
@@ -333,9 +333,9 @@ fun BookDetailsScreen(
                         ) {
                             Text(
                                 text = title,
-                                fontSize = 18.sp,
+                                style = MaterialTheme.typography.titleMedium,
                                 fontWeight = if (selectedTabIndex == index) FontWeight.Bold else FontWeight.Normal,
-                                color = if (selectedTabIndex == index) Color.Black else Color.Gray,
+                                color = if (selectedTabIndex == index) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(bottom = 4.dp),
                                 softWrap = false
                             )
@@ -344,7 +344,7 @@ fun BookDetailsScreen(
                                     modifier = Modifier
                                         .width(20.dp)
                                         .height(3.dp)
-                                        .background(CyanMain, RoundedCornerShape(2.dp))
+                                        .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(2.dp))
                                 )
                             } else {
                                 Spacer(modifier = Modifier.height(3.dp))
@@ -357,7 +357,12 @@ fun BookDetailsScreen(
 
                 when (selectedTabIndex) {
                     0 -> { // Overview
-                        Text(text = book.description, fontSize = 14.sp, color = Color.Gray, lineHeight = 22.sp)
+                        Text(
+                            text = book.description, 
+                            style = MaterialTheme.typography.bodyMedium, 
+                            color = MaterialTheme.colorScheme.onSurface, 
+                            lineHeight = 22.sp
+                        )
                     }
                     1 -> { // Details
                         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -377,20 +382,21 @@ fun BookDetailsScreen(
                             ) {
                                 Text(
                                     text = if (reviews.isEmpty()) "No Reviews Yet" else "Customer Reviews",
+                                    style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 18.sp
+                                    color = MaterialTheme.colorScheme.onBackground
                                 )
                                 if (!isOwner) {
                                     val hasReviewed = reviews.any { it.userId == currentUserId }
                                     if (!hasReviewed) {
                                         TextButton(onClick = { showReviewDialog = true }) {
-                                            Text("Write a Review", color = CyanMain, fontWeight = FontWeight.Bold)
+                                            Text("Write a Review", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                                         }
                                     } else {
                                         Text(
                                             "You've reviewed this",
-                                            fontSize = 12.sp,
-                                            color = Color.Gray,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.padding(end = 8.dp)
                                         )
                                     }
@@ -402,7 +408,7 @@ fun BookDetailsScreen(
                                     modifier = Modifier.fillMaxWidth().padding(32.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text("Be the first to review this book!", color = Color.Gray)
+                                    Text("Be the first to review this book!", color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             } else {
                                 reviews.forEach { review ->
@@ -413,15 +419,20 @@ fun BookDetailsScreen(
                     }
                     3 -> { // Edit Info Tab (Owner only)
                         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                            Button(onClick = onEditClick, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A1A1A))) {
-                                Icon(Icons.Default.Edit, contentDescription = null)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Modify Listing Details")
-                            }
-                            OutlinedButton(onClick = { showDeleteDialog = true }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), border = androidx.compose.foundation.BorderStroke(1.dp, Color.Red), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red) ) {
+                            BookSwapButton(
+                                text = "Modify Listing Details",
+                                onClick = onEditClick
+                            )
+                            OutlinedButton(
+                                onClick = { showDeleteDialog = true }, 
+                                modifier = Modifier.fillMaxWidth().height(56.dp), 
+                                shape = RoundedCornerShape(16.dp), 
+                                border = androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.error), 
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error) 
+                            ) {
                                 Icon(Icons.Default.Delete, contentDescription = null)
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Delete This Book")
+                                Text("Delete This Book", fontWeight = FontWeight.Bold)
                             }
                         }
                     }

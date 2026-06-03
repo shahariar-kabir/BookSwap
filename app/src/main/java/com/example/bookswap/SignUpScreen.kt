@@ -25,7 +25,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -36,8 +35,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.example.bookswap.ui.theme.CyanMain
 
 @Composable
 fun SignUpScreen(
@@ -60,7 +57,6 @@ fun SignUpScreen(
     val loading by viewModel.loading
     val error by viewModel.error
     val scrollState = rememberScrollState()
-    val windowSize = rememberWindowSize()
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -81,62 +77,26 @@ fun SignUpScreen(
             text = { Text(error ?: "An unexpected error occurred during sign up.") },
             confirmButton = {
                 TextButton(onClick = { viewModel.clearError() }) {
-                    Text("Try Again", color = CyanMain, fontWeight = FontWeight.Bold)
+                    Text("Try Again", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                 }
             },
-            shape = RoundedCornerShape(24.dp),
-            containerColor = Color.White
+            shape = RoundedCornerShape(24.dp)
         )
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.White)) {
-        HeaderBackground()
-
+    BookSwapScaffold(
+        title = "Create Account",
+        showBack = true,
+        onBack = onLoginClick
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .systemBarsPadding()
-                .imePadding()
-                .padding(horizontal = if (windowSize.widthSizeClass == WindowSizeClass.EXPANDED) 120.dp else 32.dp)
+                .padding(padding)
+                .padding(horizontal = 32.dp)
                 .verticalScroll(scrollState),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(if (windowSize.heightSizeClass == WindowSizeClass.COMPACT) 20.dp else 40.dp))
-            
-            // Top Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                Column {
-                    Text("BOOK", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                    Text("SWAP", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 24.dp))
-                }
-                
-                Surface(
-                    modifier = Modifier.size(if (windowSize.widthSizeClass == WindowSizeClass.COMPACT) 60.dp else 80.dp),
-                    shape = RoundedCornerShape(if (windowSize.widthSizeClass == WindowSizeClass.COMPACT) 30.dp else 40.dp),
-                    color = Color.White,
-                    shadowElevation = 4.dp
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.app_logo),
-                        contentDescription = "Logo",
-                        modifier = Modifier.padding(8.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(if (windowSize.heightSizeClass == WindowSizeClass.COMPACT) 20.dp else 40.dp))
-
-            Text(
-                text = "Sign Up",
-                fontSize = if (windowSize.widthSizeClass == WindowSizeClass.COMPACT) 40.sp else 56.sp,
-                fontWeight = FontWeight.Black,
-                modifier = Modifier.align(Alignment.Start)
-            )
-
             Spacer(modifier = Modifier.height(24.dp))
 
             // Profile Picture Picker
@@ -144,7 +104,7 @@ fun SignUpScreen(
                 modifier = Modifier
                     .size(100.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFFF5F5F5))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
                     .clickable { launcher.launch("image/*") },
                 contentAlignment = Alignment.Center
             ) {
@@ -159,75 +119,71 @@ fun SignUpScreen(
                     Icon(
                         Icons.Default.AddAPhoto,
                         contentDescription = "Add Photo",
-                        tint = Color.Gray,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(32.dp)
                     )
                 }
             }
-            Text("Add Profile Picture", fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(top = 8.dp))
+            Text(
+                "Add Profile Picture", 
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant, 
+                modifier = Modifier.padding(top = 8.dp)
+            )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
-            TextField(
+            BookSwapTextField(
                 value = name,
                 onValueChange = { name = it; viewModel.clearError() },
-                label = { Text("Full Name") },
-                leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
-                modifier = Modifier.fillMaxWidth(),
-                colors = TextFieldDefaults.colors(unfocusedContainerColor = Color.Transparent, focusedContainerColor = Color.Transparent)
+                label = "Full Name",
+                leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) }
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            TextField(
+            BookSwapTextField(
                 value = username,
                 onValueChange = { username = it; viewModel.clearError() },
-                label = { Text("Username") },
-                leadingIcon = { Icon(Icons.Default.AlternateEmail, contentDescription = null) },
-                modifier = Modifier.fillMaxWidth(),
-                colors = TextFieldDefaults.colors(unfocusedContainerColor = Color.Transparent, focusedContainerColor = Color.Transparent)
+                label = "Username",
+                leadingIcon = { Icon(Icons.Default.AlternateEmail, contentDescription = null) }
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            TextField(
+            BookSwapTextField(
                 value = email,
                 onValueChange = { email = it; viewModel.clearError() },
-                label = { Text("Email") },
+                label = "Email",
                 leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
-                modifier = Modifier.fillMaxWidth(),
-                colors = TextFieldDefaults.colors(unfocusedContainerColor = Color.Transparent, focusedContainerColor = Color.Transparent)
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            TextField(
+            BookSwapTextField(
                 value = phone,
                 onValueChange = { phone = it; viewModel.clearError() },
-                label = { Text("Phone Number") },
+                label = "Phone Number",
                 leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                modifier = Modifier.fillMaxWidth(),
-                colors = TextFieldDefaults.colors(unfocusedContainerColor = Color.Transparent, focusedContainerColor = Color.Transparent)
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            TextField(
+            BookSwapTextField(
                 value = address,
                 onValueChange = { address = it; viewModel.clearError() },
-                label = { Text("Address") },
-                leadingIcon = { Icon(Icons.Default.Home, contentDescription = null) },
-                modifier = Modifier.fillMaxWidth(),
-                colors = TextFieldDefaults.colors(unfocusedContainerColor = Color.Transparent, focusedContainerColor = Color.Transparent)
+                label = "Address",
+                leadingIcon = { Icon(Icons.Default.Home, contentDescription = null) }
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            TextField(
+            BookSwapTextField(
                 value = password,
                 onValueChange = { password = it; viewModel.clearError() },
-                label = { Text("Password") },
+                label = "Password",
                 leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                 trailingIcon = {
                     val image = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
@@ -236,48 +192,39 @@ fun SignUpScreen(
                     }
                 },
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                modifier = Modifier.fillMaxWidth(),
-                colors = TextFieldDefaults.colors(unfocusedContainerColor = Color.Transparent, focusedContainerColor = Color.Transparent)
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(40.dp))
 
-            if (loading) {
-                CircularProgressIndicator(color = CyanMain)
-            } else {
-                Button(
-                    onClick = { 
-                        viewModel.signUp(email, password, name, username, phone, address, imageBitmap) { 
-                            onSignUpSuccess(email) 
-                        } 
-                    },
-                    modifier = Modifier.fillMaxWidth().height(if (windowSize.widthSizeClass == WindowSizeClass.COMPACT) 50.dp else 64.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = CyanMain)
-                ) {
-                    Text("SIGN UP", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.Black)
-                }
-            }
+            BookSwapButton(
+                text = "SIGN UP",
+                onClick = { 
+                    viewModel.signUp(email, password, name, username, phone, address, imageBitmap) { 
+                        onSignUpSuccess(email) 
+                    } 
+                },
+                isLoading = loading
+            )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             Text(
                 text = buildAnnotatedString {
                     append("Already have an account? ")
-                    withStyle(style = SpanStyle(color = CyanMain, fontWeight = FontWeight.Bold)) {
+                    withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)) {
                         append("Login")
                     }
                 },
-                color = Color.Gray,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 32.dp)
-                    .navigationBarsPadding()
                     .clickable { onLoginClick() },
                 textAlign = TextAlign.Center,
-                fontSize = 14.sp
+                style = MaterialTheme.typography.bodyMedium
             )
+            
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }

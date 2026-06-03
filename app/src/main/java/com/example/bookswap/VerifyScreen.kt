@@ -1,6 +1,5 @@
 package com.example.bookswap
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -15,8 +14,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.example.bookswap.ui.theme.CyanMain
 
 @Composable
 fun VerifyScreen(
@@ -38,70 +35,63 @@ fun VerifyScreen(
             text = { Text(error ?: "Invalid or expired verification code.") },
             confirmButton = {
                 TextButton(onClick = { viewModel.clearError() }) {
-                    Text("Try Again", color = CyanMain, fontWeight = FontWeight.Bold)
+                    Text("Try Again", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                 }
             },
-            shape = RoundedCornerShape(24.dp),
-            containerColor = Color.White
+            shape = RoundedCornerShape(24.dp)
         )
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.White)) {
-        HeaderBackground()
-
+    BookSwapScaffold(
+        title = "Verification",
+        showBack = true,
+        onBack = onBack
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(padding)
                 .padding(horizontal = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(120.dp))
+            Spacer(modifier = Modifier.height(60.dp))
 
             Text(
                 text = "Verify Email",
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Black,
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.align(Alignment.Start)
             )
             
             Text(
                 text = "Enter the verification code sent to $email",
-                fontSize = 16.sp,
-                color = Color.Gray,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.align(Alignment.Start).padding(top = 8.dp)
+            )
+
+            Spacer(modifier = Modifier.height(48.dp))
+
+            BookSwapTextField(
+                value = code,
+                onValueChange = { if (it.length <= 8) code = it; viewModel.clearError() },
+                label = "Verification Code",
+                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
 
             Spacer(modifier = Modifier.height(40.dp))
 
-            TextField(
-                value = code,
-                onValueChange = { if (it.length <= 8) code = it; viewModel.clearError() },
-                label = { Text("Verification Code") },
-                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth(),
-                colors = TextFieldDefaults.colors(unfocusedContainerColor = Color.Transparent, focusedContainerColor = Color.Transparent)
+            BookSwapButton(
+                text = "VERIFY",
+                onClick = { viewModel.verifyCode(email, code, onVerificationSuccess) },
+                isLoading = loading
             )
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            if (loading) {
-                CircularProgressIndicator(color = CyanMain)
-            } else {
-                Button(
-                    onClick = { viewModel.verifyCode(email, code, onVerificationSuccess) },
-                    modifier = Modifier.fillMaxWidth().height(50.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = CyanMain)
-                ) {
-                    Text("VERIFY", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.Black)
-                }
-            }
 
             Spacer(modifier = Modifier.height(24.dp))
 
             TextButton(onClick = onBack) {
-                Text("Back to Sign Up", color = Color.Gray)
+                Text("Back to Sign Up", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

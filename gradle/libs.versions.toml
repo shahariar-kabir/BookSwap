@@ -7,7 +7,7 @@ junitVersion = "1.1.5"
 espressoCore = "3.5.1"
 lifecycleRuntimeKtx = "2.7.0"
 activityCompose = "1.8.2"
-composeBom = "2023.10.01"
+composeBom = "2024.05.00"
 googleServices = "4.4.0"
 firebaseBom = "32.7.1"
 coil = "2.5.0"
@@ -45,6 +45,7 @@ supabase-realtime = { group = "io.github.jan-tennert.supabase", name = "realtime
 
 # Ktor
 ktor-client-android = { group = "io.ktor", name = "ktor-client-android", version.ref = "ktor" }
+ktor-client-okhttp = { group = "io.ktor", name = "ktor-client-okhttp", version.ref = "ktor" }
 ktor-client-core = { group = "io.ktor", name = "ktor-client-core", version.ref = "ktor" }
 ktor-client-serialization = { group = "io.ktor", name = "ktor-client-serialization", version.ref = "ktor" }
 ktor-client-content-negotiation = { group = "io.ktor", name = "ktor-client-content-negotiation", version.ref = "ktor" }

@@ -21,7 +21,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     userName: String,
@@ -54,42 +53,14 @@ fun HomeScreen(
         }
     }
 
-    Scaffold(
+    BookSwapScaffold(
         bottomBar = {
-            NavigationBar(
-                containerColor = Color.White,
-                tonalElevation = 8.dp
-            ) {
-                NavigationBarItem(
-                    selected = true,
-                    onClick = { },
-                    icon = { Icon(Icons.Default.Home, contentDescription = null) },
-                    label = { Text("Home") }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onExploreClick,
-                    icon = { Icon(Icons.Default.Explore, contentDescription = null) },
-                    label = { Text("Explore") }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onAddClick,
-                    icon = { Icon(Icons.Default.AddCircle, contentDescription = null, modifier = Modifier.size(32.dp)) },
-                    label = { Text("Add") }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onChatClick,
-                    icon = { Icon(Icons.Default.Message, contentDescription = null) },
-                    label = { Text("Chats") }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onProfileClick,
-                    icon = { Icon(Icons.Default.Person, contentDescription = null) },
-                    label = { Text("Profile") }
-                )
+            BookSwapNavigationBar {
+                BookSwapNavItem(selected = true, onClick = {}, icon = Icons.Default.Home, label = "Home")
+                BookSwapNavItem(selected = false, onClick = onExploreClick, icon = Icons.Default.Explore, label = "Explore")
+                BookSwapNavItem(selected = false, onClick = onAddClick, icon = Icons.Default.AddCircle, label = "Add")
+                BookSwapNavItem(selected = false, onClick = onChatClick, icon = Icons.Default.Message, label = "Chats")
+                BookSwapNavItem(selected = false, onClick = onProfileClick, icon = Icons.Default.Person, label = "Profile")
             }
         }
     ) { paddingValues ->
@@ -97,33 +68,37 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .background(Color(0xFFF8F9FA))
                 .verticalScroll(rememberScrollState())
         ) {
-            // Header with constraints
+            // Header
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(if (windowSize.widthSizeClass == WindowSizeClass.EXPANDED) 48.dp else 24.dp),
+                    .padding(horizontal = 24.dp, vertical = 24.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(text = "Welcome back,", color = Color.Gray, fontSize = 14.sp)
+                    Text(
+                        text = "Welcome back,", 
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     Text(
                         text = "$userName!", 
-                        color = Color.Black, 
-                        fontSize = 24.sp, 
-                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = MaterialTheme.colorScheme.primary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
                 Spacer(modifier = Modifier.width(16.dp))
                 Surface(
-                    modifier = Modifier.size(48.dp),
+                    modifier = Modifier
+                        .size(48.dp)
+                        .floatingElement(shape = CircleShape),
                     shape = CircleShape,
-                    color = Color(0xFFE3F2FD),
+                    color = Color.Transparent,
                     onClick = onProfileClick
                 ) {
                     if (userPhotoUrl != null) {
@@ -134,7 +109,7 @@ fun HomeScreen(
                             contentScale = ContentScale.Crop
                         )
                     } else {
-                        Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.padding(8.dp), tint = Color(0xFF1976D2))
+                        Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.padding(8.dp), tint = MaterialTheme.colorScheme.primary)
                     }
                 }
             }
@@ -165,7 +140,7 @@ fun HomeScreen(
                         isFavorite = favoriteBookIds.contains(book.id),
                         onFavoriteToggle = { book.id?.let { bookViewModel.toggleFavorite(it) } },
                         onClick = { onBookClick(book) },
-                        backgroundColor = Color.White,
+                        backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
                         windowSize = windowSize,
                         width = 160.dp,
                         height = 240.dp
@@ -186,7 +161,7 @@ fun HomeScreen(
                 }
             }
             
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(100.dp)) // Added safety space
         }
     }
 }
@@ -196,20 +171,24 @@ fun SectionHeader(title: String, onSeeAll: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 12.dp),
+            .padding(horizontal = 24.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = title, 
-            fontSize = 20.sp, 
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onBackground,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.weight(1f),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            modifier = Modifier.weight(1f)
         )
         TextButton(onClick = onSeeAll, contentPadding = PaddingValues(start = 8.dp)) {
-            Text("See All", color = Color(0xFF1976D2), softWrap = false)
+            Text(
+                "See All", 
+                color = MaterialTheme.colorScheme.primary, 
+                style = MaterialTheme.typography.labelLarge,
+                softWrap = false
+            )
         }
     }
 }
@@ -218,11 +197,11 @@ fun SectionHeader(title: String, onSeeAll: () -> Unit) {
 fun ActiveSwapItem(request: ChatRequest, onClick: () -> Unit) {
     Surface(
         modifier = Modifier
-            .width(200.dp)
-            .clickable { onClick() },
+            .width(240.dp)
+            .clickable { onClick() }
+            .floatingElement(shape = RoundedCornerShape(16.dp)),
         shape = RoundedCornerShape(16.dp),
-        color = Color.White,
-        border = BorderStroke(1.dp, Color(0xFFEEEEEE))
+        color = Color.Transparent
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
@@ -230,15 +209,15 @@ fun ActiveSwapItem(request: ChatRequest, onClick: () -> Unit) {
         ) {
             Box(
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(44.dp)
                     .clip(CircleShape)
-                    .background(if (request.status == "accepted") Color(0xFFE8F5E9) else Color(0xFFFFF3E0)),
+                    .background(if (request.status == "accepted") MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = if (request.status == "accepted") Icons.Default.SwapHoriz else Icons.Default.Pending,
                     contentDescription = null,
-                    tint = if (request.status == "accepted") Color(0xFF4CAF50) else Color(0xFFFF9800),
+                    tint = if (request.status == "accepted") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -246,15 +225,16 @@ fun ActiveSwapItem(request: ChatRequest, onClick: () -> Unit) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = request.bookTitle ?: "Book Swap",
+                    style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = if (request.status == "accepted") "Ongoing Chat" else "Pending Request",
-                    color = Color.Gray,
-                    fontSize = 12.sp,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )

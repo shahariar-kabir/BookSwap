@@ -1,5 +1,13 @@
 package com.example.bookswap
 
+import android.graphics.Bitmap
+import android.graphics.ImageDecoder
+import android.net.Uri
+import android.os.Build
+import android.provider.MediaStore
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -17,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -30,43 +39,50 @@ fun ChatListScreen(
     currentUserId: String,
     onChatClick: (Long) -> Unit,
     onProfileClick: (String) -> Unit,
+    onHomeClick: () -> Unit,
+    onExploreClick: () -> Unit,
+    onAddClick: () -> Unit,
+    onProfileTabClick: () -> Unit,
     onBack: () -> Unit
 ) {
-    // Only show ACCEPTED requests as "Messages"
-    val chatRequests = viewModel.chatRequests.filter { it.status == "accepted" }
+    val chatRequests = viewModel.chatRequests.filter { 
+        it.status in listOf("accepted", "completed", "delivered", "rented") 
+    }
     var showTopMenu by remember { mutableStateOf(false) }
     var showBlockedUsersDialog by remember { mutableStateOf(false) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Messages", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                actions = {
-                    Box {
-                        IconButton(onClick = { showTopMenu = true }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "Options")
-                        }
-                        DropdownMenu(
-                            expanded = showTopMenu,
-                            onDismissRequest = { showTopMenu = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("Blocked Users") },
-                                onClick = {
-                                    showTopMenu = false
-                                    showBlockedUsersDialog = true
-                                },
-                                leadingIcon = { Icon(Icons.Default.Block, contentDescription = null) }
-                            )
-                        }
-                    }
+    BookSwapScaffold(
+        title = "Messages",
+        showBack = true,
+        onBack = onBack,
+        actions = {
+            Box {
+                IconButton(onClick = { showTopMenu = true }) {
+                    Icon(Icons.Default.MoreVert, contentDescription = "Options", tint = MaterialTheme.colorScheme.primary)
                 }
-            )
+                DropdownMenu(
+                    expanded = showTopMenu,
+                    onDismissRequest = { showTopMenu = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Blocked Users") },
+                        onClick = {
+                            showTopMenu = false
+                            showBlockedUsersDialog = true
+                        },
+                        leadingIcon = { Icon(Icons.Default.Block, contentDescription = null) }
+                    )
+                }
+            }
+        },
+        bottomBar = {
+            BookSwapNavigationBar {
+                BookSwapNavItem(selected = false, onClick = onHomeClick, icon = Icons.Default.Home, label = "Home")
+                BookSwapNavItem(selected = false, onClick = onExploreClick, icon = Icons.Default.Explore, label = "Explore")
+                BookSwapNavItem(selected = false, onClick = onAddClick, icon = Icons.Default.AddCircle, label = "Add")
+                BookSwapNavItem(selected = true, onClick = {}, icon = Icons.Default.Message, label = "Chats")
+                BookSwapNavItem(selected = false, onClick = onProfileTabClick, icon = Icons.Default.Person, label = "Profile")
+            }
         }
     ) { padding ->
         if (showBlockedUsersDialog) {
@@ -78,18 +94,33 @@ fun ChatListScreen(
 
         if (chatRequests.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.Message, contentDescription = null, modifier = Modifier.size(64.dp), tint = Color.LightGray)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("No active conversations", color = Color.Gray)
-                    Text("Accepted swap requests will appear here", fontSize = 12.sp, color = Color.LightGray)
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
+                    Icon(
+                        Icons.Default.Forum, 
+                        contentDescription = null, 
+                        modifier = Modifier.size(80.dp), 
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Text(
+                        "No conversations yet", 
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        "Accepted swap requests will appear here for you to chat.", 
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
                 }
             }
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(padding),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                contentPadding = PaddingValues(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 items(chatRequests) { request ->
                     val isReceiver = request.receiverId == currentUserId
@@ -99,13 +130,13 @@ fun ChatListScreen(
                     
                     var showMenu by remember { mutableStateOf(false) }
 
-                    Card(
-                        modifier = Modifier.fillMaxWidth().clickable { 
-                            request.id?.let { onChatClick(it) }
-                        },
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { request.id?.let { onChatClick(it) } }
+                            .floatingElement(shape = RoundedCornerShape(20.dp)),
+                        shape = RoundedCornerShape(20.dp),
+                        color = Color.Transparent
                     ) {
                         Row(
                             modifier = Modifier.padding(16.dp),
@@ -113,10 +144,10 @@ fun ChatListScreen(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(52.dp)
+                                    .size(56.dp)
                                     .clip(CircleShape)
-                                    .background(Color(0xFFE3F2FD))
-                                    .clickable { otherPartyId.let { onProfileClick(it) } },
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
+                                    .clickable { otherPartyId?.let { onProfileClick(it) } },
                                 contentAlignment = Alignment.Center
                             ) {
                                 if (otherPartyAvatar != null) {
@@ -127,7 +158,7 @@ fun ChatListScreen(
                                         contentScale = ContentScale.Crop
                                     )
                                 } else {
-                                    Icon(Icons.Default.Person, contentDescription = null, tint = Color(0xFF1976D2))
+                                    Icon(Icons.Default.Person, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                                 }
                             }
                             Spacer(modifier = Modifier.width(16.dp))
@@ -135,17 +166,21 @@ fun ChatListScreen(
                                 Text(
                                     text = otherPartyName ?: "User",
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                    fontSize = 17.sp,
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
-                                    Icon(Icons.Default.MenuBook, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color.Gray)
-                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Icon(
+                                        Icons.Default.MenuBook, 
+                                        contentDescription = null, 
+                                        modifier = Modifier.size(14.dp), 
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
                                     Text(
                                         text = request.bookTitle ?: "Book", 
                                         fontSize = 13.sp, 
-                                        color = Color.Gray,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
@@ -153,7 +188,7 @@ fun ChatListScreen(
                             }
                             Box {
                                 IconButton(onClick = { showMenu = true }) {
-                                    Icon(Icons.Default.MoreVert, contentDescription = "Menu", tint = Color.LightGray)
+                                    Icon(Icons.Default.MoreVert, contentDescription = "Menu", tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
                                 }
                                 DropdownMenu(
                                     expanded = showMenu,
@@ -197,6 +232,21 @@ fun ChatMessagesScreen(
     var messageText by remember { mutableStateOf("") }
     val messages = viewModel.messages
     val listState = rememberLazyListState()
+    val context = LocalContext.current
+
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            val bitmap = if (Build.VERSION.SDK_INT < 28) {
+                MediaStore.Images.Media.getBitmap(context.contentResolver, it)
+            } else {
+                val source = ImageDecoder.createSource(context.contentResolver, it)
+                ImageDecoder.decodeBitmap(source)
+            }
+            viewModel.sendImageMessage(requestId, bitmap)
+        }
+    }
 
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
@@ -208,9 +258,6 @@ fun ChatMessagesScreen(
 
     val otherPartyName = remember(request) {
         if (request?.receiverId == currentUserId) request.senderName else request?.receiverName
-    }
-    val otherPartyUsername = remember(request) {
-        if (request?.receiverId == currentUserId) request.senderUsername else request?.receiverUsername
     }
     val otherPartyAvatar = remember(request) {
         if (request?.receiverId == currentUserId) request.senderAvatar else request?.receiverAvatar
@@ -231,95 +278,126 @@ fun ChatMessagesScreen(
     }
 
     Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        containerColor = Color.Transparent,
         topBar = {
-            TopAppBar(
-                title = { 
-                    Row(
-                        modifier = Modifier
-                            .clickable { otherPartyId?.let { onProfileClick(it) } }
-                            .padding(4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFFE3F2FD)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (otherPartyAvatar != null) {
-                                AsyncImage(
-                                    model = otherPartyAvatar,
-                                    contentDescription = null,
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
-                                )
-                            } else {
-                                Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(24.dp), tint = Color(0xFF1976D2))
-                            }
+            Column {
+                Spacer(modifier = Modifier.statusBarsPadding())
+                CenterAlignedTopAppBar(
+                    title = {
+                        Text(
+                            text = otherPartyName ?: "Chat",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.primary)
                         }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(otherPartyName ?: "Chat", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                                if (otherPartyUsername != null) {
-                                    Text(
-                                        text = " @$otherPartyUsername",
-                                        fontSize = 12.sp,
-                                        color = Color.Gray,
-                                        modifier = Modifier.padding(start = 4.dp)
-                                    )
+                    },
+                    actions = {
+                        otherPartyId?.let { id ->
+                            Surface(
+                                modifier = Modifier
+                                    .padding(end = 16.dp)
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .clickable { onProfileClick(id) }
+                                    .floatingElement(shape = CircleShape),
+                                color = Color.Transparent
+                            ) {
+                                if (otherPartyAvatar != null) {
+                                    AsyncImage(model = otherPartyAvatar, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                                } else {
+                                    Icon(Icons.Default.Person, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(8.dp))
                                 }
                             }
-                            request?.bookTitle?.let { 
-                                Text(
-                                    text = "Swap: $it", 
-                                    fontSize = 12.sp, 
-                                    color = Color.Gray,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                ) 
-                            }
                         }
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                }
-            )
+                    },
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
+                )
+            }
         },
         bottomBar = {
-            Surface(tonalElevation = 8.dp, color = Color.White) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets.ime)
+                    .navigationBarsPadding(),
+                color = Color.Transparent
+            ) {
                 Row(
-                    modifier = Modifier.padding(16.dp).navigationBarsPadding().fillMaxWidth(),
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                        .fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    TextField(
-                        value = messageText,
-                        onValueChange = { messageText = it },
-                        modifier = Modifier.weight(1f),
-                        placeholder = { Text("Type a message...") },
-                        shape = RoundedCornerShape(24.dp),
-                        colors = TextFieldDefaults.colors(
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent,
-                            focusedContainerColor = Color(0xFFF5F5F5),
-                            unfocusedContainerColor = Color(0xFFF5F5F5)
-                        )
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
                     IconButton(
-                        onClick = {
-                            if (messageText.isNotBlank()) {
-                                viewModel.sendMessage(requestId, messageText)
-                                messageText = ""
-                            }
-                        },
-                        enabled = messageText.isNotBlank()
+                        onClick = { galleryLauncher.launch("image/*") },
+                        modifier = Modifier.size(44.dp)
                     ) {
-                        Icon(Icons.Default.Send, contentDescription = "Send", tint = Color(0xFF1976D2))
+                        Icon(
+                            Icons.Default.AddPhotoAlternate, 
+                            contentDescription = "Send Image", 
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.width(8.dp))
+                    
+                    Surface(
+                        modifier = Modifier.weight(1f),
+                        color = Color.White.copy(alpha = 0.1f),
+                        shape = RoundedCornerShape(28.dp),
+                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f))
+                    ) {
+                        TextField(
+                            value = messageText,
+                            onValueChange = { messageText = it },
+                            placeholder = { Text("Type a message...", color = Color.White.copy(alpha = 0.5f)) },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = Color.Transparent,
+                                unfocusedContainerColor = Color.Transparent,
+                                disabledContainerColor = Color.Transparent,
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent,
+                                cursorColor = MaterialTheme.colorScheme.primary,
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White
+                            ),
+                            maxLines = 5
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.width(12.dp))
+                    
+                    Surface(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clickable(enabled = messageText.isNotBlank()) {
+                                if (messageText.isNotBlank()) {
+                                    viewModel.sendMessage(requestId, messageText)
+                                    messageText = ""
+                                }
+                            }
+                            .background(
+                                if (messageText.isNotBlank()) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.1f),
+                                CircleShape
+                            ),
+                        shape = CircleShape,
+                        color = Color.Transparent
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Default.Send, 
+                                contentDescription = "Send", 
+                                tint = if (messageText.isNotBlank()) Color.Black else Color.White.copy(alpha = 0.3f),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -327,37 +405,92 @@ fun ChatMessagesScreen(
     ) { padding ->
         LazyColumn(
             state = listState,
-            modifier = Modifier.fillMaxSize().padding(padding),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
             reverseLayout = false,
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            contentPadding = PaddingValues(24.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(messages) { message ->
-                val isMe = message.senderId == currentUserId
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = if (isMe) Alignment.CenterEnd else Alignment.CenterStart
-                ) {
-                    Surface(
-                        color = if (isMe) Color(0xFF1976D2) else Color(0xFFF0F0F0),
-                        shape = RoundedCornerShape(
-                            topStart = 16.dp,
-                            topEnd = 16.dp,
-                            bottomStart = if (isMe) 16.dp else 0.dp,
-                            bottomEnd = if (isMe) 0.dp else 16.dp
-                        )
+                if (message.messageType == "system" || message.senderId == "system") {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = message.content,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                            color = if (isMe) Color.White else Color.Black
-                        )
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text(
+                                text = message.content,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                } else {
+                    val isMe = message.senderId == currentUserId
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = if (isMe) Alignment.CenterEnd else Alignment.CenterStart
+                    ) {
+                        Surface(
+                            modifier = Modifier
+                                .widthIn(max = 280.dp)
+                                .floatingElement(
+                                    shape = RoundedCornerShape(
+                                        topStart = 20.dp,
+                                        topEnd = 20.dp,
+                                        bottomStart = if (isMe) 20.dp else 4.dp,
+                                        bottomEnd = if (isMe) 4.dp else 20.dp
+                                    ),
+                                    backgroundColor = if (isMe) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else Color.White.copy(alpha = 0.05f)
+                                ),
+                            color = Color.Transparent,
+                            shape = RoundedCornerShape(20.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
+                                if (message.messageType == "image" && message.mediaUrl != null) {
+                                    AsyncImage(
+                                        model = message.mediaUrl,
+                                        contentDescription = "Image message",
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .heightIn(max = 200.dp)
+                                            .clip(RoundedCornerShape(12.dp)),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                }
+
+                                Text(
+                                    text = message.content,
+                                    color = if (isMe) MaterialTheme.colorScheme.onPrimaryContainer else Color.White,
+                                    fontSize = 15.sp
+                                )
+                                if (message.createdAt != null) {
+                                    Text(
+                                        text = formatRelativeTime(message.createdAt),
+                                        fontSize = 10.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                        modifier = Modifier.align(Alignment.End),
+                                        fontWeight = FontWeight.Light
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
     }
 }
+
 @Composable
 fun BlockedUsersDialog(
     viewModel: ChatViewModel,
@@ -372,18 +505,18 @@ fun BlockedUsersDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Blocked Users", fontWeight = FontWeight.Bold) },
+        title = { Text("Blocked Users", fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary) },
         text = {
             Box(modifier = Modifier.sizeIn(maxHeight = 400.dp)) {
                 if (loading && blockedUsers.isEmpty()) {
                     Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                        CircularProgressIndicator(modifier = Modifier.size(32.dp), color = MaterialTheme.colorScheme.primary, strokeWidth = 3.dp)
                     }
                 } else if (blockedUsers.isEmpty()) {
-                    Text("No blocked users", modifier = Modifier.padding(16.dp), color = Color.Gray)
+                    Text("No blocked users yet.", modifier = Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {
                     LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         items(blockedUsers) { blocked ->
@@ -393,9 +526,9 @@ fun BlockedUsersDialog(
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(40.dp)
+                                        .size(44.dp)
                                         .clip(CircleShape)
-                                        .background(Color(0xFFF0F0F0)),
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     if (blocked.blockedAvatar != null) {
@@ -406,7 +539,7 @@ fun BlockedUsersDialog(
                                             contentScale = ContentScale.Crop
                                         )
                                     } else {
-                                        Icon(Icons.Default.Person, contentDescription = null, tint = Color.Gray)
+                                        Icon(Icons.Default.Person, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                                     }
                                 }
                                 Spacer(modifier = Modifier.width(12.dp))
@@ -414,16 +547,17 @@ fun BlockedUsersDialog(
                                     Text(
                                         text = blocked.blockedName ?: "User",
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 14.sp
+                                        fontSize = 15.sp,
+                                        color = MaterialTheme.colorScheme.onSurface
                                     )
                                     if (blocked.blockedUsername != null) {
-                                        Text(text = "@${blocked.blockedUsername}", fontSize = 12.sp, color = Color.Gray)
+                                        Text(text = "@${blocked.blockedUsername}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
                                 }
                                 TextButton(
                                     onClick = { blocked.id?.let { viewModel.unblockUser(it, blocked.blockedId) } }
                                 ) {
-                                    Text("Unblock", color = Color(0xFF1976D2))
+                                    Text("Unblock", fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
@@ -432,11 +566,14 @@ fun BlockedUsersDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Close")
+            Button(
+                onClick = onDismiss,
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("Close", color = Color.Black, fontWeight = FontWeight.Bold)
             }
         },
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(28.dp),
         containerColor = Color.White
     )
 }

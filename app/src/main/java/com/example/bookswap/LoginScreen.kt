@@ -1,8 +1,6 @@
 package com.example.bookswap
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -19,9 +17,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -33,9 +29,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.example.bookswap.ui.theme.CyanMain
-import com.example.bookswap.ui.theme.DarkTeal
 
 @Composable
 fun LoginScreen(
@@ -52,7 +45,6 @@ fun LoginScreen(
     val loading by viewModel.loading
     val error by viewModel.error
     val scrollState = rememberScrollState()
-    val windowSize = rememberWindowSize()
 
     // Show Dialog when there is an error
     if (error != null) {
@@ -63,78 +55,67 @@ fun LoginScreen(
             text = { Text(error ?: "An unexpected error occurred.") },
             confirmButton = {
                 TextButton(onClick = { viewModel.clearError() }) {
-                    Text("Try Again", color = CyanMain, fontWeight = FontWeight.Bold)
+                    Text("Try Again", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                 }
             },
-            shape = RoundedCornerShape(24.dp),
-            containerColor = Color.White
+            shape = RoundedCornerShape(24.dp)
         )
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.White)) {
-        HeaderBackground()
-
+    BookSwapScaffold { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .systemBarsPadding()
-                .imePadding()
-                .padding(horizontal = if (windowSize.widthSizeClass == WindowSizeClass.EXPANDED) 120.dp else 32.dp)
+                .padding(padding)
+                .padding(horizontal = 32.dp)
                 .verticalScroll(scrollState),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(if (windowSize.heightSizeClass == WindowSizeClass.COMPACT) 20.dp else 40.dp))
+            Spacer(modifier = Modifier.height(60.dp))
             
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+            Surface(
+                modifier = Modifier
+                    .size(100.dp)
+                    .floatingElement(shape = RoundedCornerShape(50.dp)),
+                shape = RoundedCornerShape(50.dp),
+                color = Color.Transparent
             ) {
-                Column {
-                    Text("BOOK", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                    Text("SWAP", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 24.dp))
-                }
-                
-                Surface(
-                    modifier = Modifier.size(if (windowSize.widthSizeClass == WindowSizeClass.COMPACT) 60.dp else 80.dp),
-                    shape = RoundedCornerShape(if (windowSize.widthSizeClass == WindowSizeClass.COMPACT) 30.dp else 40.dp),
-                    color = Color.White,
-                    shadowElevation = 4.dp
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.app_logo),
-                        contentDescription = "Logo",
-                        modifier = Modifier.padding(8.dp)
-                    )
-                }
+                Image(
+                    painter = painterResource(id = R.drawable.app_logo),
+                    contentDescription = "Logo",
+                    modifier = Modifier.padding(16.dp)
+                )
             }
 
-            Spacer(modifier = Modifier.height(if (windowSize.heightSizeClass == WindowSizeClass.COMPACT) 40.dp else 100.dp))
+            Spacer(modifier = Modifier.height(40.dp))
 
             Text(
-                text = "Login",
-                fontSize = if (windowSize.widthSizeClass == WindowSizeClass.COMPACT) 40.sp else 56.sp,
-                fontWeight = FontWeight.Black,
-                modifier = Modifier.align(Alignment.Start)
+                text = "Welcome Back",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            
+            Text(
+                text = "Sign in to continue your book journey",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            Spacer(modifier = Modifier.height(if (windowSize.heightSizeClass == WindowSizeClass.COMPACT) 20.dp else 40.dp))
+            Spacer(modifier = Modifier.height(48.dp))
 
-            TextField(
+            BookSwapTextField(
                 value = identifier,
                 onValueChange = { identifier = it; viewModel.clearError() },
-                label = { Text("Email or Username") },
-                leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
-                modifier = Modifier.fillMaxWidth(),
-                colors = TextFieldDefaults.colors(unfocusedContainerColor = Color.Transparent, focusedContainerColor = Color.Transparent)
+                label = "Email or Username",
+                leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            TextField(
+            BookSwapTextField(
                 value = password,
                 onValueChange = { password = it; viewModel.clearError() },
-                label = { Text("Password") },
+                label = "Password",
                 leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                 trailingIcon = {
                     val image = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
@@ -143,9 +124,7 @@ fun LoginScreen(
                     }
                 },
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                modifier = Modifier.fillMaxWidth(),
-                colors = TextFieldDefaults.colors(unfocusedContainerColor = Color.Transparent, focusedContainerColor = Color.Transparent)
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
             )
 
             Row(
@@ -154,78 +133,45 @@ fun LoginScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = rememberMe, onCheckedChange = { rememberMe = it })
-                    Text("Remember me", fontSize = 12.sp)
+                    Checkbox(
+                        checked = rememberMe, 
+                        onCheckedChange = { rememberMe = it },
+                        colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
+                    )
+                    Text("Remember me", style = MaterialTheme.typography.labelMedium)
                 }
                 TextButton(onClick = onForgotPasswordClick) {
-                    Text("Forgot password?", fontSize = 12.sp, color = Color.Black)
+                    Text("Forgot password?", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                 }
             }
 
-            Spacer(modifier = Modifier.height(if (windowSize.heightSizeClass == WindowSizeClass.COMPACT) 16.dp else 32.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
-            if (loading) {
-                CircularProgressIndicator(color = CyanMain)
-            } else {
-                Button(
-                    onClick = { viewModel.login(identifier, password, onLoginSuccess) },
-                    modifier = Modifier.fillMaxWidth().height(if (windowSize.widthSizeClass == WindowSizeClass.COMPACT) 50.dp else 64.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = CyanMain)
-                ) {
-                    Text("LOGIN", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.Black)
-                }
-            }
+            BookSwapButton(
+                text = "LOGIN",
+                onClick = { viewModel.login(identifier, password, onLoginSuccess) },
+                isLoading = loading
+            )
 
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
                 text = buildAnnotatedString {
                     append("Don't have an account? ")
-                    withStyle(style = SpanStyle(color = CyanMain, fontWeight = FontWeight.Bold)) {
+                    withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)) {
                         append("Sign Up")
                     }
                 },
-                color = Color.Gray,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 32.dp)
-                    .navigationBarsPadding()
                     .clickable { onSignUpClick() },
                 textAlign = TextAlign.Center,
-                fontSize = 14.sp
+                style = MaterialTheme.typography.bodyMedium
             )
-        }
-    }
-}
-
-@Composable
-fun HeaderBackground() {
-    Canvas(modifier = Modifier.fillMaxWidth().height(300.dp)) {
-        val path = Path().apply {
-            moveTo(0f, 0f)
-            lineTo(size.width, 0f)
-            lineTo(size.width, size.height * 0.2f)
             
-            cubicTo(
-                size.width * 0.8f, size.height * 0.1f,
-                size.width * 0.6f, size.height * 0.4f,
-                size.width * 0.4f, size.height * 0.5f
-            )
-            cubicTo(
-                size.width * 0.2f, size.height * 0.6f,
-                0f, size.height * 0.8f,
-                0f, size.height
-            )
-            close()
+            Spacer(modifier = Modifier.height(32.dp))
         }
-        
-        drawPath(
-            path = path,
-            brush = Brush.verticalGradient(
-                colors = listOf(DarkTeal, CyanMain)
-            )
-        )
     }
 }
 
